@@ -22,7 +22,6 @@ use pmmp\encoding\VarInt;
 use pocketmine\color\Color;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
-use Ramsey\Uuid\UuidInterface;
 use function count;
 
 class PlayerListPacket extends DataPacket implements ClientboundPacket{
@@ -31,18 +30,22 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 	public const TYPE_REMOVE = 0;
 	public const TYPE_ADD = 1;
 
+	/**
+	 * @var int[]
+	 * @phpstan-var array<self::TYPE_*, int>
+	 */
 	private const INNER_TYPES = [
 		self::TYPE_ADD => 0,
 		self::TYPE_REMOVE => 1,
 	];
 
 	public int $type;
-	/** @var PlayerListEntry[]|UuidInterface[] */
+	/** @var PlayerListEntry[] */
 	private array $entries = [];
 
 	/**
 	 * @generate-create-func
-	 * @param PlayerListEntry[]|UuidInterface[] $entries
+	 * @param PlayerListEntry[] $entries
 	 */
 	private static function create(int $type, array $entries) : self{
 		$result = new self;
@@ -59,14 +62,14 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	/**
-	 * @param UuidInterface[] $entries
+	 * @param PlayerListEntry[] $entries
 	 */
 	public static function remove(array $entries) : self{
 		return self::create(self::TYPE_REMOVE, $entries);
 	}
 
 	/**
-	 * @return PlayerListEntry[]|UuidInterface[]
+	 * @return PlayerListEntry[]
 	 */
 	public function getEntries() : array{ return $this->entries; }
 
@@ -117,9 +120,7 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 
 		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->type === self::TYPE_ADD){
 			foreach($this->entries as $entry){
-				if($entry instanceof PlayerListEntry){
-					$entry->skinData->setVerified(CommonTypes::getBool($in));
-				}
+				$entry->skinData->setVerified(CommonTypes::getBool($in));
 			}
 		}
 	}
@@ -131,17 +132,14 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 
 		VarInt::writeUnsignedInt($out, count($this->entries));
 		foreach($this->entries as $entry){
-			$type = $entry instanceof UuidInterface ? self::TYPE_REMOVE : $entry->type;
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-				VarInt::writeUnsignedInt($out, $type);
-				Byte::writeUnsigned($out, self::INNER_TYPES[$type]);
-			}elseif($type !== $this->type){
+				VarInt::writeUnsignedInt($out, $entry->type);
+				Byte::writeUnsigned($out, self::INNER_TYPES[$entry->type]);
+			}elseif($entry->type !== $this->type){
 				throw new \InvalidArgumentException("Add and remove entries cannot be mixed in the same packet before 1.26.40");
 			}
 
-			if($entry instanceof UuidInterface){
-				CommonTypes::putUUID($out, $entry);
-			}elseif($type === self::TYPE_REMOVE){
+			if($entry->type === self::TYPE_REMOVE){
 				CommonTypes::putUUID($out, $entry->uuid);
 			}else{
 				CommonTypes::putUUID($out, $entry->uuid);
@@ -164,9 +162,7 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 
 		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->type === self::TYPE_ADD){
 			foreach($this->entries as $entry){
-				if($entry instanceof PlayerListEntry){
-					CommonTypes::putBool($out, $entry->skinData->isVerified());
-				}
+				CommonTypes::putBool($out, $entry->skinData->isVerified());
 			}
 		}
 	}
