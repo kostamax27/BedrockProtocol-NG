@@ -43,15 +43,23 @@ class TransferPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->address = CommonTypes::getString($in);
 		$this->port = LE::readUnsignedShort($in);
-		$this->reloadWorld = CommonTypes::getBool($in);
-		$this->gatheringsConfig = CommonTypes::readOptional($in, GatheringJoinInfo::read(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
+			$this->reloadWorld = CommonTypes::getBool($in);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->gatheringsConfig = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => GatheringJoinInfo::read($in, $protocolId));
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->address);
 		LE::writeUnsignedShort($out, $this->port);
-		CommonTypes::putBool($out, $this->reloadWorld);
-		CommonTypes::writeOptional($out, $this->gatheringsConfig, static fn($out, $v) => $v->write($out));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
+			CommonTypes::putBool($out, $this->reloadWorld);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->gatheringsConfig, fn(ByteBufferWriter $out, GatheringJoinInfo $v) => $v->write($out, $protocolId));
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

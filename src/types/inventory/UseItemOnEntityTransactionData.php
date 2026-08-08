@@ -71,11 +71,7 @@ class UseItemOnEntityTransactionData extends TransactionData{
 			$this->actionType = VarInt::readUnsignedInt($in);
 		}
 		$this->hotbarSlot = VarInt::readSignedInt($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			$this->itemInHand = CommonTypes::getItemStackWrapper($in);
-		}else{
-			$this->itemInHand = CommonTypes::getItemStackWrapper($in);
-		}
+		$this->itemInHand = CommonTypes::getItemStackWrapper($in, $protocolId, $protocolId >= ProtocolInfo::PROTOCOL_1_26_30);
 		$this->playerPosition = CommonTypes::getVector3($in);
 		$this->clickPosition = CommonTypes::getVector3($in);
 	}
@@ -88,11 +84,7 @@ class UseItemOnEntityTransactionData extends TransactionData{
 			VarInt::writeUnsignedInt($out, $this->actionType);
 		}
 		VarInt::writeSignedInt($out, $this->hotbarSlot);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			CommonTypes::putItemStackWrapper($out, $this->itemInHand);
-		}else{
-			CommonTypes::putItemStackWrapper($out, $this->itemInHand);
-		}
+		CommonTypes::putItemStackWrapper($out, $protocolId, $this->itemInHand, $protocolId >= ProtocolInfo::PROTOCOL_1_26_30);
 		CommonTypes::putVector3($out, $this->playerPosition);
 		CommonTypes::putVector3($out, $this->clickPosition);
 	}

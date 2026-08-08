@@ -49,7 +49,10 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 	/**
 	 * @generate-create-func
 	 * @param ResourcePackInfoEntry[] $resourcePackEntries
+	 * @param BehaviorPackInfoEntry[] $behaviorPackEntries
+	 * @param string[]                $cdnUrls
 	 * @phpstan-param list<ResourcePackInfoEntry> $resourcePackEntries
+	 * @phpstan-param array<string, string>       $cdnUrls
 	 */
 	public static function create(
 		array $resourcePackEntries,
@@ -107,7 +110,23 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 			$this->worldTemplateVersion = CommonTypes::getString($in);
 		}
 
-		$this->resourcePackEntries = CommonTypes::readList($in, static fn(ByteBufferReader $in) => ResourcePackInfoEntry::read($in));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->resourcePackEntries = CommonTypes::readList($in, fn(ByteBufferReader $in) => ResourcePackInfoEntry::read($in, $protocolId));
+		}else{
+			$resourcePackCount = LE::readUnsignedShort($in);
+			while($resourcePackCount-- > 0){
+				$this->resourcePackEntries[] = ResourcePackInfoEntry::read($in, $protocolId);
+			}
+
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_20_30 && $protocolId < ProtocolInfo::PROTOCOL_1_21_40){
+				$this->cdnUrls = [];
+				for($i = 0, $count = VarInt::readUnsignedInt($in); $i < $count; $i++){
+					$packId = CommonTypes::getString($in);
+					$cdnUrl = CommonTypes::getString($in);
+					$this->cdnUrls[$packId] = $cdnUrl;
+				}
+			}
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
@@ -116,11 +135,35 @@ class ResourcePacksInfoPacket extends DataPacket implements ClientboundPacket{
 			CommonTypes::putBool($out, $this->hasAddons);
 		}
 		CommonTypes::putBool($out, $this->hasScripts);
-		CommonTypes::putBool($out, $this->forceDisableVibrantVisuals);
-		CommonTypes::putUUID($out, $this->worldTemplateId);
-		CommonTypes::putString($out, $this->worldTemplateVersion);
-
-		CommonTypes::writeList($out, $this->resourcePackEntries, static fn(ByteBufferWriter $out, ResourcePackInfoEntry $entry) => $entry->write($out));
+		if($protocolId <= ProtocolInfo::PROTOCOL_1_21_20){
+			CommonTypes::putBool($out, $this->forceServerPacks);
+			LE::writeUnsignedShort($out, count($this->behaviorPackEntries));
+			foreach($this->behaviorPackEntries as $entry){
+				$entry->write($out, $protocolId);
+			}
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_50){
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_90){
+				CommonTypes::putBool($out, $this->forceDisableVibrantVisuals);
+			}
+			CommonTypes::putUUID($out, $this->worldTemplateId);
+			CommonTypes::putString($out, $this->worldTemplateVersion);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeList($out, $this->resourcePackEntries, fn(ByteBufferWriter $out, ResourcePackInfoEntry $entry) => $entry->write($out, $protocolId));
+		}else{
+			LE::writeUnsignedShort($out, count($this->resourcePackEntries));
+			foreach($this->resourcePackEntries as $entry){
+				$entry->write($out, $protocolId);
+			}
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_20_30 && $protocolId < ProtocolInfo::PROTOCOL_1_21_40){
+				VarInt::writeUnsignedInt($out, count($this->cdnUrls));
+				foreach($this->cdnUrls as $packId => $cdnUrl){
+					CommonTypes::putString($out, $packId);
+					CommonTypes::putString($out, $cdnUrl);
+				}
+			}
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

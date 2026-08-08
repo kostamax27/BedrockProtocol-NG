@@ -112,7 +112,11 @@ class MovePlayerPacket extends DataPacket implements ClientboundPacket, Serverbo
 		$this->mode = Byte::readUnsigned($in);
 		$this->onGround = CommonTypes::getBool($in);
 		$this->ridingActorRuntimeId = CommonTypes::getActorRuntimeId($in);
-		$this->telemetryData = CommonTypes::readOptional($in, MovePlayerTeleportData::read(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->telemetryData = CommonTypes::readOptional($in, MovePlayerTeleportData::read(...));
+		}else{
+			$this->telemetryData = $this->mode === self::MODE_TELEPORT ? MovePlayerTeleportData::read($in) : null;
+		}
 		$this->tick = VarInt::readUnsignedLong($in);
 	}
 
@@ -125,7 +129,11 @@ class MovePlayerPacket extends DataPacket implements ClientboundPacket, Serverbo
 		Byte::writeUnsigned($out, $this->mode);
 		CommonTypes::putBool($out, $this->onGround);
 		CommonTypes::putActorRuntimeId($out, $this->ridingActorRuntimeId);
-		CommonTypes::writeOptional($out, $this->telemetryData, static fn(ByteBufferWriter $out, MovePlayerTeleportData $data) => $data->write($out));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->telemetryData, static fn(ByteBufferWriter $out, MovePlayerTeleportData $data) => $data->write($out));
+		}elseif($this->mode === self::MODE_TELEPORT){
+			($this->telemetryData ?? throw new \InvalidArgumentException("telemetryData must be set when mode is MODE_TELEPORT"))->write($out);
+		}
 		VarInt::writeUnsignedLong($out, $this->tick);
 	}
 

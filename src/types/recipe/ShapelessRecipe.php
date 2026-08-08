@@ -83,40 +83,46 @@ final class ShapelessRecipe{
 		$recipeId = CommonTypes::getString($in);
 		$input = [];
 		for($j = 0, $ingredientCount = VarInt::readUnsignedInt($in); $j < $ingredientCount; ++$j){
-			$input[] = CommonTypes::getRecipeIngredient($in);
+			$input[] = CommonTypes::getRecipeIngredient($in, $protocolId);
 		}
 		$output = [];
 		for($k = 0, $resultCount = VarInt::readUnsignedInt($in); $k < $resultCount; ++$k){
-			$output[] = CommonTypes::getItemStackWithoutStackId($in);
+			$output[] = CommonTypes::getItemStackWithoutStackId($in, $protocolId);
 		}
 		$uuid = CommonTypes::getUUID($in);
 		$block = CommonTypes::getString($in);
 		$priority = VarInt::readSignedInt($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_0){
-			$unlockingRequirement = CommonTypes::readOptional($in, RecipeUnlockingRequirement::read(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$unlockingRequirement = CommonTypes::readOptional($in, fn(ByteBufferReader $in) => RecipeUnlockingRequirement::read($in, $protocolId));
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_0){
+			$unlockingRequirement = RecipeUnlockingRequirement::read($in, $protocolId);
 		}
 
 		$recipeNetId = CommonTypes::readRecipeNetId($in);
 
-		return new self($recipeId, $input, $output, $uuid, $block, $priority, $unlockingRequirement ?? new RecipeUnlockingRequirement(null), $recipeNetId);
+		return new self($recipeId, $input, $output, $uuid, $block, $priority, $unlockingRequirement ?? null, $recipeNetId);
 	}
 
 	public function encode(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->recipeId);
 		VarInt::writeUnsignedInt($out, count($this->inputs));
 		foreach($this->inputs as $item){
-			CommonTypes::putRecipeIngredient($out, $item);
+			CommonTypes::putRecipeIngredient($out, $protocolId, $item);
 		}
 
 		VarInt::writeUnsignedInt($out, count($this->outputs));
 		foreach($this->outputs as $item){
-			CommonTypes::putItemStackWithoutStackId($out, $item);
+			CommonTypes::putItemStackWithoutStackId($out, $protocolId, $item);
 		}
 
 		CommonTypes::putUUID($out, $this->uuid);
 		CommonTypes::putString($out, $this->blockName);
 		VarInt::writeSignedInt($out, $this->priority);
-		CommonTypes::writeOptional($out, $this->unlockingRequirement, static fn(ByteBufferWriter $out, RecipeUnlockingRequirement $data) => $data->write($out));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->unlockingRequirement, fn(ByteBufferWriter $out, RecipeUnlockingRequirement $data) => $data->write($out, $protocolId));
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_21_0){
+			($this->unlockingRequirement ?? new RecipeUnlockingRequirement(RecipeUnlockingContext::NONE, null))->write($out, $protocolId);
+		}
 
 		CommonTypes::writeRecipeNetId($out, $this->recipeNetId);
 	}

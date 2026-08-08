@@ -26,11 +26,11 @@ final class NullGameRule extends GameRule{
 		parent::__construct($isPlayerModifiable);
 	}
 
-	public function encode(ByteBufferWriter $out) : void{
+	public function encode(ByteBufferWriter $out, int $protocolId, bool $isStartGame) : void{
 		//NOOP
 	}
 
-	public static function decode(ByteBufferReader $in, bool $isPlayerModifiable) : self{
+	public static function decode(ByteBufferReader $in, int $protocolId, bool $isPlayerModifiable) : self{
 		return new self($isPlayerModifiable);
 	}
 }

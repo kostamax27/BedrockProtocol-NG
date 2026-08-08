@@ -16,43 +16,30 @@ namespace pocketmine\network\mcpe\protocol\types\recipe;
 
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
-use pmmp\encoding\LE;
-use pmmp\encoding\VarInt;
-use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
-final class StringIdMetaItemDescriptor implements ItemDescriptor{
+/**
+ * No longer sent since 1.26.40.
+ */
+final class ComplexAliasItemDescriptor implements ItemDescriptor{
 
 	public function __construct(
-		private string $id,
-		private int $meta
-	){
-		if($meta < 0){
-			throw new \InvalidArgumentException("Meta cannot be negative");
-		}
-	}
+		private string $alias
+	){}
 
 	public function getDescriptorType() : ItemDescriptorType{
-		return ItemDescriptorType::STRING_ID_META;
+		return ItemDescriptorType::COMPLEX_ALIAS;
 	}
 
-	public function getId() : string{ return $this->id; }
-
-	public function getMeta() : int{ return $this->meta; }
+	public function getAlias() : string{ return $this->alias; }
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
-		$stringId = CommonTypes::getString($in);
-		$meta = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? VarInt::readSignedInt($in) : LE::readUnsignedShort($in);
+		$alias = CommonTypes::getString($in);
 
-		return new self($stringId, $meta);
+		return new self($alias);
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
-		CommonTypes::putString($out, $this->id);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-			VarInt::writeSignedInt($out, $this->meta);
-		}else{
-			LE::writeUnsignedShort($out, $this->meta);
-		}
+		CommonTypes::putString($out, $this->alias);
 	}
 }

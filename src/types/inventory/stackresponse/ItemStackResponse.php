@@ -17,6 +17,7 @@ namespace pocketmine\network\mcpe\protocol\types\inventory\stackresponse;
 use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 /**
@@ -56,13 +57,24 @@ final class ItemStackResponse{
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$result = Byte::readUnsigned($in);
 		$requestId = CommonTypes::readItemStackRequestId($in);
-		$containerInfos = CommonTypes::readDoubleOptional($in, static fn($in) => CommonTypes::readList($in, ItemStackResponseContainerInfo::read(...)));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$containerInfos = CommonTypes::readDoubleOptional($in, fn(ByteBufferReader $in) => CommonTypes::readList($in, fn(ByteBufferReader $in) => ItemStackResponseContainerInfo::read($in, $protocolId)));
+		}else{
+			$containerInfos = $result === self::RESULT_OK ?
+				CommonTypes::readList($in, fn(ByteBufferReader $in) => ItemStackResponseContainerInfo::read($in, $protocolId)) :
+				null;
+		}
 		return new self($result, $requestId, $containerInfos);
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		Byte::writeUnsigned($out, $this->result);
 		CommonTypes::writeItemStackRequestId($out, $this->requestId);
-		CommonTypes::writeDoubleOptional($out, $this->containerInfos, static fn($out, $list) => CommonTypes::writeList($out, $list, static fn($out, $v) => $v->write($out, $protocolId)));
+		$writeContainerInfo = fn(ByteBufferWriter $out, ItemStackResponseContainerInfo $v) => $v->write($out, $protocolId);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeDoubleOptional($out, $this->containerInfos, fn(ByteBufferWriter $out, array $list) => CommonTypes::writeList($out, $list, $writeContainerInfo));
+		}elseif($this->result === self::RESULT_OK){
+			CommonTypes::writeList($out, $this->containerInfos ?? [], $writeContainerInfo);
+		}
 	}
 }

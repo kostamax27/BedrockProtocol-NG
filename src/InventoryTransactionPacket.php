@@ -73,9 +73,13 @@ class InventoryTransactionPacket extends DataPacket implements ClientboundPacket
 			}
 		}
 
-		CommonTypes::readDummyOptional($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+			CommonTypes::readDummyOptional($in);
+		}
 		$transactionType = VarInt::readUnsignedInt($in);
-		CommonTypes::readDummyOptional($in);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+			CommonTypes::readDummyOptional($in);
+		}
 		$this->trData = match($transactionType) {
 			NormalTransactionData::ID => new NormalTransactionData(),
 			MismatchTransactionData::ID => new MismatchTransactionData(),
@@ -84,7 +88,7 @@ class InventoryTransactionPacket extends DataPacket implements ClientboundPacket
 			ReleaseItemTransactionData::ID => new ReleaseItemTransactionData(),
 			default => throw new PacketDecodeException("Unknown transaction type $transactionType"),
 		};
-		$this->trData->decode($in, $protocolId);
+		$this->trData->decodeTransaction($in, $protocolId);
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
@@ -106,8 +110,11 @@ class InventoryTransactionPacket extends DataPacket implements ClientboundPacket
 			}
 		}
 		VarInt::writeUnsignedInt($out, $this->trData->getTypeId());
-		CommonTypes::writeDummyOptional($out);
-		$this->trData->encode($out);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+			CommonTypes::writeDummyOptional($out);
+		}
+		$this->trData->encodeTransaction($out, $protocolId);
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

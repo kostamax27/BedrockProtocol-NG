@@ -113,9 +113,9 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		$this->pitch = LE::readFloat($in);
 		$this->yaw = LE::readFloat($in);
 		$this->headYaw = LE::readFloat($in);
-		$this->item = CommonTypes::getItemStackWrapper($in);
+		$this->item = CommonTypes::getItemStackWrapper($in, $protocolId);
 		$this->gameMode = VarInt::readSignedInt($in);
-		$this->metadata = CommonTypes::getEntityMetadata($in);
+		$this->metadata = CommonTypes::getEntityMetadata($in, $protocolId);
 		$this->syncedProperties = PropertySyncData::read($in);
 
 		$this->abilities = AbilitiesData::decode($in, $protocolId);
@@ -139,9 +139,9 @@ class AddPlayerPacket extends DataPacket implements ClientboundPacket{
 		LE::writeFloat($out, $this->pitch);
 		LE::writeFloat($out, $this->yaw);
 		LE::writeFloat($out, $this->headYaw);
-		CommonTypes::putItemStackWrapper($out, $this->item);
+		CommonTypes::putItemStackWrapper($out, $protocolId, $this->item);
 		VarInt::writeSignedInt($out, $this->gameMode);
-		CommonTypes::putEntityMetadata($out, $this->metadata);
+		CommonTypes::putEntityMetadata($out, $protocolId, $this->metadata);
 		$this->syncedProperties->write($out);
 
 		$this->abilities->encode($out, $protocolId);

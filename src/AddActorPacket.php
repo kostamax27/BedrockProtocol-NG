@@ -114,10 +114,10 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 			return new Attribute($id, $min, $max, $current);
 		});
 
-		$this->metadata = CommonTypes::getEntityMetadata($in);
+		$this->metadata = CommonTypes::getEntityMetadata($in, $protocolId);
 		$this->syncedProperties = PropertySyncData::read($in);
 
-		$this->links = CommonTypes::readList($in, CommonTypes::getEntityLink(...));
+		$this->links = CommonTypes::readList($in, static fn(ByteBufferReader $in) => CommonTypes::getEntityLink($in, $protocolId));
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
@@ -138,10 +138,10 @@ class AddActorPacket extends DataPacket implements ClientboundPacket{
 			LE::writeFloat($out, $attribute->getMax());
 		});
 
-		CommonTypes::putEntityMetadata($out, $this->metadata);
+		CommonTypes::putEntityMetadata($out, $protocolId, $this->metadata);
 		$this->syncedProperties->write($out);
 
-		CommonTypes::writeList($out, $this->links, CommonTypes::putEntityLink(...));
+		CommonTypes::writeList($out, $this->links, static fn(ByteBufferWriter $out, EntityLink $link) => CommonTypes::putEntityLink($out, $protocolId, $link));
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

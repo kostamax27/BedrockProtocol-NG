@@ -122,5 +122,14 @@ class SkinData{
 
 	public function getTrustedSkinFlag() : string{ return $this->trustedSkinFlag; }
 
+	public function isVerified() : bool{ return $this->trustedSkinFlag === self::TRUSTED_SKIN_TRUE; }
+
+	/**
+	 * @internal
+	 */
+	public function setVerified(bool $verified) : void{
+		$this->trustedSkinFlag = $verified ? self::TRUSTED_SKIN_TRUE : self::TRUSTED_SKIN_FALSE;
+	}
+
 	public function getProfileHash() : string{ return $this->profileHash; }
 }

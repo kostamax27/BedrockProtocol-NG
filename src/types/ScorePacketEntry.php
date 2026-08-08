@@ -15,6 +15,10 @@ declare(strict_types=1);
 namespace pocketmine\network\mcpe\protocol\types;
 
 class ScorePacketEntry{
+	public const TYPE_PLAYER = 1;
+	public const TYPE_ENTITY = 2;
+	public const TYPE_FAKE_PLAYER = 3;
+
 	public int $scoreboardId;
 	/** @var string|null (optional for remove action) */
 	public ?string $objectiveName;

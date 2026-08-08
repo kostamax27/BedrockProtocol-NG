@@ -59,7 +59,7 @@ class SubChunkRequestPacket extends DataPacket implements ServerboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->dimension = VarInt::readSignedInt($in);
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_26_20){
-			$this->basePosition = SubChunkPosition::readVarInts($in);
+			$this->basePosition = SubChunkPosition::read($in, true);
 		}
 
 		$this->entries = [];
@@ -75,13 +75,13 @@ class SubChunkRequestPacket extends DataPacket implements ServerboundPacket{
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeSignedInt($out, $this->dimension);
 		if($protocolId <= ProtocolInfo::PROTOCOL_1_26_20){
-			$this->basePosition->writeVarInts($out);
+			$this->basePosition->write($out, true);
 		}
 
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			LE::writeUnsignedInt($out, count($this->entries));
-		}else{
 			VarInt::writeUnsignedInt($out, count($this->entries));
+		}else{
+			LE::writeUnsignedInt($out, count($this->entries));
 		}
 		foreach($this->entries as $entry){
 			$entry->write($out);

@@ -59,7 +59,7 @@ class DimensionDataPacket extends DataPacket implements ClientboundPacket{
 				throw new PacketDecodeException("Repeated dimension data for key \"$dimensionNameId\"");
 			}
 
-			$dimensionData = DimensionData::read($in);
+			$dimensionData = DimensionData::read($in, $protocolId);
 			$this->definitions[$dimensionNameId] = $dimensionData;
 		}
 	}

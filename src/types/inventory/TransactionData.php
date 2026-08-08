@@ -42,9 +42,17 @@ abstract class TransactionData{
 	 * @throws DataDecodeException
 	 * @throws PacketDecodeException
 	 */
-	final public function decode(ByteBufferReader $in) : void{
-		$this->actions = CommonTypes::readList($in, static fn($in) => (new NetworkInventoryAction())->read($in));
-		$this->decodeData($in);
+	final public function decodeTransaction(ByteBufferReader $in, int $protocolId) : void{
+		$this->actions = CommonTypes::readList($in, static fn($in) => (new NetworkInventoryAction())->readTransaction($in, $protocolId));
+		$this->decodeData($in, $protocolId);
+	}
+
+	/**
+	 * @throws DataDecodeException
+	 * @throws PacketDecodeException
+	 */
+	final public function decodeAuthInput(ByteBufferReader $in, int $protocolId) : void{
+		$this->actions = CommonTypes::readList($in, static fn($in) => (new NetworkInventoryAction())->readAuthInput($in, $protocolId));
 	}
 
 	/**
@@ -53,9 +61,13 @@ abstract class TransactionData{
 	 */
 	abstract protected function decodeData(ByteBufferReader $in, int $protocolId) : void;
 
-	final public function encode(ByteBufferWriter $out) : void{
-		CommonTypes::writeList($out, $this->actions, static fn($out, $a) => $a->write($out));
-		$this->encodeData($out);
+	final public function encodeTransaction(ByteBufferWriter $out, int $protocolId) : void{
+		CommonTypes::writeList($out, $this->actions, static fn($out, $a) => $a->writeTransaction($out, $protocolId));
+		$this->encodeData($out, $protocolId);
+	}
+
+	final public function encodeAuthInput(ByteBufferWriter $out, int $protocolId) : void{
+		CommonTypes::writeList($out, $this->actions, static fn($out, $a) => $a->writeAuthInput($out, $protocolId));
 	}
 
 	abstract protected function encodeData(ByteBufferWriter $out, int $protocolId) : void;

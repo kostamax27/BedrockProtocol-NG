@@ -42,14 +42,14 @@ class PlayerSkinPacket extends DataPacket implements ClientboundPacket, Serverbo
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->uuid = CommonTypes::getUUID($in);
-		$this->skin = CommonTypes::getSkin($in);
+		$this->skin = CommonTypes::getSkin($in, $protocolId);
 		$this->newSkinName = CommonTypes::getString($in);
 		$this->oldSkinName = CommonTypes::getString($in);
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putUUID($out, $this->uuid);
-		CommonTypes::putSkin($out, $this->skin);
+		CommonTypes::putSkin($out, $protocolId, $this->skin);
 		CommonTypes::putString($out, $this->newSkinName);
 		CommonTypes::putString($out, $this->oldSkinName);
 	}

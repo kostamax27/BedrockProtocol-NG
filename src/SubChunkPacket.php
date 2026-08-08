@@ -16,10 +16,12 @@ namespace pocketmine\network\mcpe\protocol;
 
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\SubChunkPacketEntry;
 use pocketmine\network\mcpe\protocol\types\SubChunkPosition;
+use function count;
 
 class SubChunkPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::SUB_CHUNK_PACKET;
@@ -62,17 +64,32 @@ class SubChunkPacket extends DataPacket implements ClientboundPacket{
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->cacheEnabled = CommonTypes::getBool($in);
 		$this->dimension = VarInt::readSignedInt($in);
-		$this->baseSubChunkPosition = SubChunkPosition::read($in);
+		$this->baseSubChunkPosition = SubChunkPosition::read($in, $protocolId < ProtocolInfo::PROTOCOL_1_26_40);
 
-		$this->entries = CommonTypes::readList($in, SubChunkPacketEntry::read(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->entries = CommonTypes::readList($in, fn(ByteBufferReader $in) => SubChunkPacketEntry::read($in, $protocolId, $this->cacheEnabled));
+		}else{
+			$this->entries = [];
+			for($i = 0, $count = LE::readUnsignedInt($in); $i < $count; $i++){
+				$this->entries[] = SubChunkPacketEntry::read($in, $protocolId, $this->cacheEnabled);
+			}
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putBool($out, $this->cacheEnabled);
 		VarInt::writeSignedInt($out, $this->dimension);
-		$this->baseSubChunkPosition->write($out);
+		$this->baseSubChunkPosition->write($out, $protocolId < ProtocolInfo::PROTOCOL_1_26_40);
 
-		CommonTypes::writeList($out, $this->entries, static fn($out, $v) => $v->write($out, $protocolId));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeList($out, $this->entries, fn(ByteBufferWriter $out, SubChunkPacketEntry $v) => $v->write($out, $protocolId, $this->cacheEnabled));
+		}else{
+			LE::writeUnsignedInt($out, count($this->entries));
+
+			foreach($this->entries as $entry){
+				$entry->write($out, $protocolId, $this->cacheEnabled);
+			}
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

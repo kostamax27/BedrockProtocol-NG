@@ -34,7 +34,7 @@ final class BoolGameRule extends GameRule{
 		return $this->value;
 	}
 
-	public function encode(ByteBufferWriter $out) : void{
+	public function encode(ByteBufferWriter $out, int $protocolId, bool $isStartGame) : void{
 		CommonTypes::putBool($out, $this->value);
 	}
 

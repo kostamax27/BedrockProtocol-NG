@@ -32,16 +32,16 @@ final class CreativeGroupEntry{
 
 	public function getIcon() : ItemStack{ return $this->icon; }
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$categoryId = Byte::readUnsigned($in);
 		$categoryName = CommonTypes::getString($in);
-		$icon = CommonTypes::getItemStackWithoutStackId($in);
+		$icon = CommonTypes::getItemStackWithoutStackId($in, $protocolId);
 		return new self($categoryId, $categoryName, $icon);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		Byte::writeUnsigned($out, $this->categoryId);
 		CommonTypes::putString($out, $this->categoryName);
-		CommonTypes::putItemStackWithoutStackId($out, $this->icon);
+		CommonTypes::putItemStackWithoutStackId($out, $protocolId, $this->icon);
 	}
 }

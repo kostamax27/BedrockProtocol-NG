@@ -17,6 +17,7 @@ namespace pocketmine\network\mcpe\protocol\types;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\inventory\InventoryTransactionChangedSlotsHack;
 use pocketmine\network\mcpe\protocol\types\inventory\UseItemTransactionData;
@@ -48,21 +49,31 @@ final class ItemInteractionData{
 		return $this->transactionData;
 	}
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$requestId = VarInt::readSignedInt($in);
-		$requestChangedSlots = CommonTypes::readOptional($in, static fn($in) => CommonTypes::readList($in, InventoryTransactionChangedSlotsHack::read(...)));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$requestChangedSlots = CommonTypes::readOptional($in, static fn($in) => CommonTypes::readList($in, InventoryTransactionChangedSlotsHack::read(...)));
+		}elseif($requestId !== 0){
+			$requestChangedSlots = CommonTypes::readList($in, InventoryTransactionChangedSlotsHack::read(...));
+		}
 		$transactionData = new UseItemTransactionData();
-		CommonTypes::readDummyOptional($in);
-		CommonTypes::readDummyOptional($in);
-		$transactionData->decode($in);
-		return new ItemInteractionData($requestId, $requestChangedSlots, $transactionData);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::readDummyOptional($in);
+			CommonTypes::readDummyOptional($in);
+		}
+		$transactionData->decodeAuthInput($in, $protocolId);
+		return new ItemInteractionData($requestId, $requestChangedSlots ?? null, $transactionData);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeSignedInt($out, $this->requestId);
-		CommonTypes::writeOptional($out, $this->requestChangedSlots, static fn($out, $list) => CommonTypes::writeList($out, $list, static fn($out, $v) => $v->write($out)));
-		CommonTypes::writeDummyOptional($out);
-		CommonTypes::writeDummyOptional($out);
-		$this->transactionData->encode($out);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->requestChangedSlots, static fn($out, $list) => CommonTypes::writeList($out, $list, static fn($out, $v) => $v->write($out)));
+			CommonTypes::writeDummyOptional($out);
+			CommonTypes::writeDummyOptional($out);
+		}elseif($this->requestId !== 0){
+			CommonTypes::writeList($out, $this->requestChangedSlots ?? [], static fn($out, $v) => $v->write($out));
+		}
+		$this->transactionData->encodeAuthInput($out, $protocolId);
 	}
 }

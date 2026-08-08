@@ -24,18 +24,42 @@ use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
  */
 final class PresenceInfo{
 	public function __construct(
-		private ?string $richPresenceId
+		private ?string $richPresenceId,
+		private ?string $experienceName = null,
+		private ?string $worldName = null
 	){}
 
 	public function getRichPresenceId() : ?string{ return $this->richPresenceId; }
 
-	public static function read(ByteBufferReader $in) : self{
-		$richPresenceId = CommonTypes::readOptional($in, CommonTypes::getString(...));
+	public function getExperienceName() : ?string{ return $this->experienceName; }
 
-		return new self($richPresenceId ?? "");
+	public function getWorldName() : ?string{ return $this->worldName; }
+
+	public static function read(ByteBufferReader $in, int $protocolId) : self{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$richPresenceId = CommonTypes::readOptional($in, CommonTypes::getString(...));
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+			$experienceName = CommonTypes::readOptional($in, CommonTypes::getString(...));
+			$worldName = CommonTypes::readOptional($in, CommonTypes::getString(...));
+			$richPresenceId = CommonTypes::getString($in);
+		}else{
+			$experienceName = CommonTypes::getString($in);
+			$worldName = CommonTypes::getString($in);
+		}
+
+		return new self($richPresenceId ?? null, $experienceName ?? null, $worldName ?? null);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
-		CommonTypes::writeOptional($out, $this->richPresenceId, CommonTypes::putString(...));
+	public function write(ByteBufferWriter $out, int $protocolId) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->richPresenceId, CommonTypes::putString(...));
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+			CommonTypes::writeOptional($out, $this->experienceName, CommonTypes::putString(...));
+			CommonTypes::writeOptional($out, $this->worldName, CommonTypes::putString(...));
+			CommonTypes::putString($out, $this->richPresenceId ?? throw new \InvalidArgumentException("richPresenceId must be set"));
+		}else{
+			CommonTypes::putString($out, $this->experienceName ?? throw new \InvalidArgumentException("experienceName must be set"));
+			CommonTypes::putString($out, $this->worldName ?? throw new \InvalidArgumentException("worldName must be set"));
+		}
 	}
 }

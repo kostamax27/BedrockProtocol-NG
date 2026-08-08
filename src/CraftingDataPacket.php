@@ -16,6 +16,7 @@ namespace pocketmine\network\mcpe\protocol;
 
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\recipe\FurnaceRecipe;
 use pocketmine\network\mcpe\protocol\types\recipe\MaterialReducerRecipe;
@@ -26,9 +27,21 @@ use pocketmine\network\mcpe\protocol\types\recipe\ShapedRecipe;
 use pocketmine\network\mcpe\protocol\types\recipe\ShapelessRecipe;
 use pocketmine\network\mcpe\protocol\types\recipe\SmithingTransformRecipe;
 use pocketmine\network\mcpe\protocol\types\recipe\SmithingTrimRecipe;
+use function count;
 
 class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::CRAFTING_DATA_PACKET;
+
+	public const ENTRY_SHAPELESS = 0;
+	public const ENTRY_SHAPED = 1;
+	public const ENTRY_FURNACE = 2;
+	public const ENTRY_FURNACE_DATA = 3;
+	public const ENTRY_MULTI = 4;
+	public const ENTRY_USER_DATA_SHAPELESS = 5;
+	public const ENTRY_SHAPELESS_CHEMISTRY = 6;
+	public const ENTRY_SHAPED_CHEMISTRY = 7;
+	public const ENTRY_SMITHING_TRANSFORM = 8;
+	public const ENTRY_SMITHING_TRIM = 9;
 
 	/**
 	 * @var ShapedRecipe[]
@@ -70,6 +83,11 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	 * @phpstan-var list<SmithingTrimRecipe>
 	 */
 	public array $smithingTrimRecipes = [];
+	/**
+	 * @var FurnaceRecipe[]
+	 * @phpstan-var list<FurnaceRecipe>
+	 */
+	public array $furnaceRecipes = [];
 
 	/**
 	 * @var PotionTypeRecipe[]
@@ -98,6 +116,7 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	 * @param ShapedRecipe[]                $shapedChemistryRecipes
 	 * @param SmithingTransformRecipe[]     $smithingTransformRecipes
 	 * @param SmithingTrimRecipe[]          $smithingTrimRecipes
+	 * @param FurnaceRecipe[]               $furnaceRecipes
 	 * @param PotionTypeRecipe[]            $potionTypeRecipes
 	 * @param PotionContainerChangeRecipe[] $potionContainerRecipes
 	 * @param MaterialReducerRecipe[]       $materialReducerRecipes
@@ -109,6 +128,7 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	 * @phpstan-param list<ShapedRecipe>                $shapedChemistryRecipes
 	 * @phpstan-param list<SmithingTransformRecipe>     $smithingTransformRecipes
 	 * @phpstan-param list<SmithingTrimRecipe>          $smithingTrimRecipes
+	 * @phpstan-param list<FurnaceRecipe>               $furnaceRecipes
 	 * @phpstan-param list<PotionTypeRecipe>            $potionTypeRecipes
 	 * @phpstan-param list<PotionContainerChangeRecipe> $potionContainerRecipes
 	 * @phpstan-param list<MaterialReducerRecipe>       $materialReducerRecipes
@@ -122,6 +142,7 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 		array $shapedChemistryRecipes,
 		array $smithingTransformRecipes,
 		array $smithingTrimRecipes,
+		array $furnaceRecipes,
 		array $potionTypeRecipes,
 		array $potionContainerRecipes,
 		array $materialReducerRecipes,
@@ -136,6 +157,7 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 		$result->shapedChemistryRecipes = $shapedChemistryRecipes;
 		$result->smithingTransformRecipes = $smithingTransformRecipes;
 		$result->smithingTrimRecipes = $smithingTrimRecipes;
+		$result->furnaceRecipes = $furnaceRecipes;
 		$result->potionTypeRecipes = $potionTypeRecipes;
 		$result->potionContainerRecipes = $potionContainerRecipes;
 		$result->materialReducerRecipes = $materialReducerRecipes;
@@ -144,14 +166,36 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
-		$this->shapedRecipes = CommonTypes::readList($in, ShapedRecipe::decode(...));
-		$this->shapelessRecipes = CommonTypes::readList($in, ShapelessRecipe::decode(...));
-		$this->multiRecipes = CommonTypes::readList($in, MultiRecipe::decode(...));
-		$this->userDataShapelessRecipes = CommonTypes::readList($in, ShapelessRecipe::decode(...));
-		$this->shapelessChemistryRecipes = CommonTypes::readList($in, ShapelessRecipe::decode(...));
-		$this->shapedChemistryRecipes = CommonTypes::readList($in, ShapedRecipe::decode(...));
-		$this->smithingTransformRecipes = CommonTypes::readList($in, SmithingTransformRecipe::decode(...));
-		$this->smithingTrimRecipes = CommonTypes::readList($in, SmithingTrimRecipe::decode(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->shapedRecipes = CommonTypes::readList($in, fn(ByteBufferReader $in) => ShapedRecipe::decode($in, $protocolId));
+			$this->shapelessRecipes = CommonTypes::readList($in, fn(ByteBufferReader $in) => ShapelessRecipe::decode($in, $protocolId));
+			$this->multiRecipes = CommonTypes::readList($in, fn(ByteBufferReader $in) => MultiRecipe::decode($in, $protocolId));
+			$this->userDataShapelessRecipes = CommonTypes::readList($in, fn(ByteBufferReader $in) => ShapelessRecipe::decode($in, $protocolId));
+			$this->shapelessChemistryRecipes = CommonTypes::readList($in, fn(ByteBufferReader $in) => ShapelessRecipe::decode($in, $protocolId));
+			$this->shapedChemistryRecipes = CommonTypes::readList($in, fn(ByteBufferReader $in) => ShapedRecipe::decode($in, $protocolId));
+			$this->smithingTransformRecipes = CommonTypes::readList($in, fn(ByteBufferReader $in) => SmithingTransformRecipe::decode($in, $protocolId));
+			$this->smithingTrimRecipes = CommonTypes::readList($in, fn(ByteBufferReader $in) => SmithingTrimRecipe::decode($in, $protocolId));
+		}else{
+			$recipeCount = VarInt::readUnsignedInt($in);
+			$previousType = "none";
+			for($i = 0; $i < $recipeCount; ++$i){
+				$recipeType = VarInt::readSignedInt($in);
+
+				match($recipeType){
+					self::ENTRY_SHAPELESS => $this->shapelessRecipes[] = ShapelessRecipe::decode($in, $protocolId),
+					self::ENTRY_USER_DATA_SHAPELESS => $this->userDataShapelessRecipes[] = ShapelessRecipe::decode($in, $protocolId),
+					self::ENTRY_SHAPELESS_CHEMISTRY => $this->shapelessChemistryRecipes[] = ShapelessRecipe::decode($in, $protocolId),
+					self::ENTRY_SHAPED => $this->shapedRecipes[] = ShapedRecipe::decode($in, $protocolId),
+					self::ENTRY_SHAPED_CHEMISTRY => $this->shapedChemistryRecipes[] = ShapedRecipe::decode($in, $protocolId),
+					self::ENTRY_FURNACE, self::ENTRY_FURNACE_DATA => $this->furnaceRecipes[] = FurnaceRecipe::decode($recipeType, $in, $protocolId),
+					self::ENTRY_MULTI => $this->multiRecipes[] = MultiRecipe::decode($in, $protocolId),
+					self::ENTRY_SMITHING_TRANSFORM => $this->smithingTransformRecipes[] = SmithingTransformRecipe::decode($in, $protocolId),
+					self::ENTRY_SMITHING_TRIM => $this->smithingTrimRecipes[] = SmithingTrimRecipe::decode($in, $protocolId),
+					default => throw new PacketDecodeException("Unhandled recipe type $recipeType (previous was $previousType)"),
+				};
+				$previousType = $recipeType;
+			}
+		}
 		$this->potionTypeRecipes = CommonTypes::readList($in, PotionTypeRecipe::decode(...));
 		$this->potionContainerRecipes = CommonTypes::readList($in, PotionContainerChangeRecipe::decode(...));
 		$this->materialReducerRecipes = CommonTypes::readList($in, MaterialReducerRecipe::decode(...));
@@ -159,14 +203,41 @@ class CraftingDataPacket extends DataPacket implements ClientboundPacket{
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		CommonTypes::writeList($out, $this->shapedRecipes, fn(ByteBufferWriter $out, ShapedRecipe $recipe) => $recipe->encode($out, $protocolId));
-		CommonTypes::writeList($out, $this->shapelessRecipes, fn(ByteBufferWriter $out, ShapelessRecipe $recipe) => $recipe->encode($out));
-		CommonTypes::writeList($out, $this->multiRecipes, fn(ByteBufferWriter $out, MultiRecipe $recipe) => $recipe->encode($out));
-		CommonTypes::writeList($out, $this->userDataShapelessRecipes, fn(ByteBufferWriter $out, ShapelessRecipe $recipe) => $recipe->encode($out));
-		CommonTypes::writeList($out, $this->shapelessChemistryRecipes, fn(ByteBufferWriter $out, ShapelessRecipe $recipe) => $recipe->encode($out));
-		CommonTypes::writeList($out, $this->shapedChemistryRecipes, fn(ByteBufferWriter $out, ShapedRecipe $recipe) => $recipe->encode($out));
-		CommonTypes::writeList($out, $this->smithingTransformRecipes, fn(ByteBufferWriter $out, SmithingTransformRecipe $recipe) => $recipe->encode($out));
-		CommonTypes::writeList($out, $this->smithingTrimRecipes, fn(ByteBufferWriter $out, SmithingTrimRecipe $recipe) => $recipe->encode($out));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeList($out, $this->shapedRecipes, fn(ByteBufferWriter $out, ShapedRecipe $recipe) => $recipe->encode($out, $protocolId));
+			CommonTypes::writeList($out, $this->shapelessRecipes, fn(ByteBufferWriter $out, ShapelessRecipe $recipe) => $recipe->encode($out, $protocolId));
+			CommonTypes::writeList($out, $this->multiRecipes, fn(ByteBufferWriter $out, MultiRecipe $recipe) => $recipe->encode($out, $protocolId));
+			CommonTypes::writeList($out, $this->userDataShapelessRecipes, fn(ByteBufferWriter $out, ShapelessRecipe $recipe) => $recipe->encode($out, $protocolId));
+			CommonTypes::writeList($out, $this->shapelessChemistryRecipes, fn(ByteBufferWriter $out, ShapelessRecipe $recipe) => $recipe->encode($out, $protocolId));
+			CommonTypes::writeList($out, $this->shapedChemistryRecipes, fn(ByteBufferWriter $out, ShapedRecipe $recipe) => $recipe->encode($out, $protocolId));
+			CommonTypes::writeList($out, $this->smithingTransformRecipes, fn(ByteBufferWriter $out, SmithingTransformRecipe $recipe) => $recipe->encode($out, $protocolId));
+			CommonTypes::writeList($out, $this->smithingTrimRecipes, fn(ByteBufferWriter $out, SmithingTrimRecipe $recipe) => $recipe->encode($out, $protocolId));
+		}else{
+			//:(
+			VarInt::writeUnsignedInt($out, count($this->shapelessRecipes) + count($this->shapedRecipes) + count($this->furnaceRecipes) + count($this->multiRecipes) +
+				count($this->userDataShapelessRecipes) + count($this->shapelessChemistryRecipes) + count($this->shapedChemistryRecipes) +
+				count($this->smithingTransformRecipes) + count($this->smithingTrimRecipes));
+
+			foreach([
+				self::ENTRY_SHAPELESS => $this->shapelessRecipes,
+				self::ENTRY_SHAPED => $this->shapedRecipes,
+				self::ENTRY_MULTI => $this->multiRecipes,
+				self::ENTRY_USER_DATA_SHAPELESS => $this->userDataShapelessRecipes,
+				self::ENTRY_SHAPELESS_CHEMISTRY => $this->shapelessChemistryRecipes,
+				self::ENTRY_SHAPED_CHEMISTRY => $this->shapedChemistryRecipes,
+				self::ENTRY_SMITHING_TRANSFORM => $this->smithingTransformRecipes,
+				self::ENTRY_SMITHING_TRIM => $this->smithingTrimRecipes,
+			] as $recipeType => $recipes){
+				foreach($recipes as $recipe){
+					VarInt::writeSignedInt($out, $recipeType);
+					$recipe->encode($out, $protocolId);
+				}
+			}
+			foreach($this->furnaceRecipes as $recipe){
+				VarInt::writeSignedInt($out, $recipe->getTypeId());
+				$recipe->encode($out, $protocolId);
+			}
+		}
 		CommonTypes::writeList($out, $this->potionTypeRecipes, fn(ByteBufferWriter $out, PotionTypeRecipe $recipe) => $recipe->encode($out));
 		CommonTypes::writeList($out, $this->potionContainerRecipes, fn(ByteBufferWriter $out, PotionContainerChangeRecipe $recipe) => $recipe->encode($out));
 		CommonTypes::writeList($out, $this->materialReducerRecipes, fn(ByteBufferWriter $out, MaterialReducerRecipe $recipe) => $recipe->encode($out));

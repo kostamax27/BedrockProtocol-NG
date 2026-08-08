@@ -21,7 +21,9 @@ use pmmp\encoding\DataDecodeException;
 use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use function array_search;
 
 final class ItemStackRequest{
 	/**
@@ -85,12 +87,20 @@ final class ItemStackRequest{
 
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$requestId = CommonTypes::readItemStackRequestId($in);
-		$actions = CommonTypes::readList($in, static function(ByteBufferReader $in) : ItemStackRequestAction{
-			$typeId = VarInt::readUnsignedInt($in);
-			$innerTypeId = Byte::readUnsigned($in);
-			$expectedInnerType = ItemStackRequestActionType::INNER_TYPES[$typeId] ?? "unknown";
-			if($expectedInnerType !== $innerTypeId){
-				throw new PacketDecodeException("ItemStackRequestAction type mismatch: outer type $typeId, expected inner type $expectedInnerType, actual inner type $innerTypeId");
+		$actions = CommonTypes::readList($in, static function(ByteBufferReader $in) use ($protocolId) : ItemStackRequestAction{
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				$typeId = VarInt::readUnsignedInt($in);
+				$innerTypeId = Byte::readUnsigned($in);
+				$expectedInnerType = ItemStackRequestActionType::INNER_TYPES[$typeId] ?? "unknown";
+				if($expectedInnerType !== $innerTypeId){
+					throw new PacketDecodeException("ItemStackRequestAction type mismatch: outer type $typeId, expected inner type $expectedInnerType, actual inner type $innerTypeId");
+				}
+			}else{
+				$innerTypeId = Byte::readUnsigned($in);
+				$typeId = array_search($innerTypeId, ItemStackRequestActionType::INNER_TYPES, true);
+				if($typeId === false){
+					throw new PacketDecodeException("Unhandled item stack request action type $innerTypeId");
+				}
 			}
 			return self::readAction($in, $protocolId, $typeId);
 		});
@@ -101,8 +111,10 @@ final class ItemStackRequest{
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::writeItemStackRequestId($out, $this->requestId);
-		CommonTypes::writeList($out, $this->actions, static function(ByteBufferWriter $out, ItemStackRequestAction $action) : void{
-			VarInt::writeUnsignedInt($out, $action->getTypeId());
+		CommonTypes::writeList($out, $this->actions, static function(ByteBufferWriter $out, ItemStackRequestAction $action) use ($protocolId) : void{
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				VarInt::writeUnsignedInt($out, $action->getTypeId());
+			}
 			Byte::writeUnsigned($out, ItemStackRequestActionType::INNER_TYPES[$action->getTypeId()]);
 			$action->write($out, $protocolId);
 		});

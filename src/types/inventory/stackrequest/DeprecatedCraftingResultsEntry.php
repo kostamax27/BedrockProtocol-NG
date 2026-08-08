@@ -19,6 +19,8 @@ use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use pocketmine\network\mcpe\protocol\types\recipe\ComplexAliasItemDescriptor;
+use pocketmine\network\mcpe\protocol\types\recipe\IntIdMetaItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\MolangItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\StringIdMetaItemDescriptor;
 use pocketmine\network\mcpe\protocol\types\recipe\TagItemDescriptor;
@@ -30,13 +32,13 @@ use pocketmine\network\mcpe\protocol\types\recipe\TagItemDescriptor;
 final class DeprecatedCraftingResultsEntry{
 
 	public function __construct(
-		private StringIdMetaItemDescriptor|TagItemDescriptor|MolangItemDescriptor|null $descriptor,
+		private StringIdMetaItemDescriptor|TagItemDescriptor|MolangItemDescriptor|IntIdMetaItemDescriptor|ComplexAliasItemDescriptor|null $descriptor,
 		private int $count,
 		private int $blockRuntimeId,
 		private string $rawExtraData
 	){}
 
-	public function getDescriptor() : StringIdMetaItemDescriptor|TagItemDescriptor|MolangItemDescriptor|null{ return $this->descriptor; }
+	public function getDescriptor() : StringIdMetaItemDescriptor|TagItemDescriptor|MolangItemDescriptor|IntIdMetaItemDescriptor|ComplexAliasItemDescriptor|null{ return $this->descriptor; }
 
 	public function getCount() : int{ return $this->count; }
 
@@ -44,8 +46,8 @@ final class DeprecatedCraftingResultsEntry{
 
 	public function getRawExtraData() : string{ return $this->rawExtraData; }
 
-	public static function read(ByteBufferReader $in) : self{
-		$descriptor = CommonTypes::readItemDescriptorNormal($in);
+	public static function read(ByteBufferReader $in, int $protocolId) : self{
+		$descriptor = CommonTypes::readItemDescriptorNormal($in, $protocolId);
 		$count = LE::readUnsignedShort($in);
 		$blockRuntimeId = VarInt::readUnsignedInt($in);
 		$rawExtraData = CommonTypes::getString($in);
@@ -53,8 +55,8 @@ final class DeprecatedCraftingResultsEntry{
 		return new self($descriptor, $count, $blockRuntimeId, $rawExtraData);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
-		CommonTypes::writeItemDescriptorNormal($out, $this->descriptor);
+	public function write(ByteBufferWriter $out, int $protocolId) : void{
+		CommonTypes::writeItemDescriptorNormal($out, $protocolId, $this->descriptor);
 		LE::writeUnsignedShort($out, $this->count);
 		VarInt::writeUnsignedInt($out, $this->blockRuntimeId);
 		CommonTypes::putString($out, $this->rawExtraData);

@@ -18,6 +18,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 /**
@@ -40,19 +41,25 @@ final class PlayerBlockAction{
 
 	public function getFace() : int{ return $this->face; }
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$actionType = VarInt::readSignedInt($in);
 		if(!self::isValidActionType($actionType)){
 			//make sure we throw the correct exception type
 			throw new PacketDecodeException("Invalid action type for " . self::class);
+		}
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $actionType === PlayerAction::STOP_BREAK){
+			return new self($actionType, new BlockPosition(0, 0, 0), 0);
 		}
 		$blockPosition = CommonTypes::getBlockPosition($in);
 		$face = VarInt::readSignedInt($in);
 		return new self($actionType, $blockPosition, $face);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		VarInt::writeSignedInt($out, $this->actionType);
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->actionType === PlayerAction::STOP_BREAK){
+			return;
+		}
 		CommonTypes::putBlockPosition($out, $this->blockPosition);
 		VarInt::writeSignedInt($out, $this->face);
 	}

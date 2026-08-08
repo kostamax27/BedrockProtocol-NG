@@ -24,6 +24,7 @@ class ClientboundUpdateSoundDataPacket extends DataPacket implements Clientbound
 	public const NETWORK_ID = ProtocolInfo::CLIENTBOUND_UPDATE_SOUND_DATA_PACKET;
 
 	private int $serverSoundHandle;
+	private string $soundEvent = "";
 	private ?SoundDataEvent $stopEvent = null;
 	private ?SoundDataEvent $volumeEvent = null;
 	private ?SoundDataEvent $pitchEvent = null;
@@ -37,6 +38,7 @@ class ClientboundUpdateSoundDataPacket extends DataPacket implements Clientbound
 	 */
 	public static function create(
 		int $serverSoundHandle,
+		string $soundEvent,
 		?SoundDataEvent $stopEvent,
 		?SoundDataEvent $volumeEvent,
 		?SoundDataEvent $pitchEvent,
@@ -47,6 +49,7 @@ class ClientboundUpdateSoundDataPacket extends DataPacket implements Clientbound
 	) : self{
 		$result = new self;
 		$result->serverSoundHandle = $serverSoundHandle;
+		$result->soundEvent = $soundEvent;
 		$result->stopEvent = $stopEvent;
 		$result->volumeEvent = $volumeEvent;
 		$result->pitchEvent = $pitchEvent;
@@ -58,6 +61,8 @@ class ClientboundUpdateSoundDataPacket extends DataPacket implements Clientbound
 	}
 
 	public function getServerSoundHandle() : int{ return $this->serverSoundHandle; }
+
+	public function getSoundEvent() : string{ return $this->soundEvent; }
 
 	public function getStopEvent() : ?SoundDataEvent{ return $this->stopEvent; }
 
@@ -75,24 +80,32 @@ class ClientboundUpdateSoundDataPacket extends DataPacket implements Clientbound
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->serverSoundHandle = LE::readUnsignedLong($in);
-		$this->stopEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
-		$this->volumeEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
-		$this->pitchEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
-		$this->fadeEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
-		$this->seekToEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
-		$this->pauseEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
-		$this->resumeEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->stopEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
+			$this->volumeEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
+			$this->pitchEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
+			$this->fadeEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
+			$this->seekToEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
+			$this->pauseEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
+			$this->resumeEvent = CommonTypes::readOptional($in, SoundDataEvent::read(...));
+		}else{
+			$this->soundEvent = CommonTypes::getString($in);
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		LE::writeUnsignedLong($out, $this->serverSoundHandle);
-		CommonTypes::writeOptional($out, $this->stopEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
-		CommonTypes::writeOptional($out, $this->volumeEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
-		CommonTypes::writeOptional($out, $this->pitchEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
-		CommonTypes::writeOptional($out, $this->fadeEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
-		CommonTypes::writeOptional($out, $this->seekToEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
-		CommonTypes::writeOptional($out, $this->pauseEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
-		CommonTypes::writeOptional($out, $this->resumeEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->stopEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
+			CommonTypes::writeOptional($out, $this->volumeEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
+			CommonTypes::writeOptional($out, $this->pitchEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
+			CommonTypes::writeOptional($out, $this->fadeEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
+			CommonTypes::writeOptional($out, $this->seekToEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
+			CommonTypes::writeOptional($out, $this->pauseEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
+			CommonTypes::writeOptional($out, $this->resumeEvent, fn(ByteBufferWriter $out, SoundDataEvent $data) => $data->write($out));
+		}else{
+			CommonTypes::putString($out, $this->soundEvent);
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

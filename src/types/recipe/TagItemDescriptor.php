@@ -17,6 +17,7 @@ namespace pocketmine\network\mcpe\protocol\types\recipe;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 final class TagItemDescriptor implements ItemDescriptor{
@@ -37,16 +38,24 @@ final class TagItemDescriptor implements ItemDescriptor{
 
 	public function getMeta() : int{ return $this->meta; }
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId) : self{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
+			//the meta wasn't sent at all before 1.26.40
+			return self::readTagOnly($in);
+		}
 		$tag = CommonTypes::getString($in);
 		$meta = VarInt::readSignedInt($in);
 
 		return new self($tag, $meta);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
-		CommonTypes::putString($out, $this->tag);
-		VarInt::writeSignedInt($out, $this->meta);
+	public function write(ByteBufferWriter $out, int $protocolId) : void{
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::putString($out, $this->tag);
+			VarInt::writeSignedInt($out, $this->meta);
+		}else{
+			$this->writeTagOnly($out);
+		}
 	}
 
 	public static function readTagOnly(ByteBufferReader $in) : self{

@@ -101,11 +101,7 @@ class UseItemTransactionData extends TransactionData{
 			$this->face = VarInt::readSignedInt($in);
 		}
 		$this->hotbarSlot = VarInt::readSignedInt($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			$this->itemInHand = CommonTypes::getItemStackWrapper($in);
-		}else{
-			$this->itemInHand = CommonTypes::getItemStackWrapper($in);
-		}
+		$this->itemInHand = CommonTypes::getItemStackWrapper($in, $protocolId, $protocolId >= ProtocolInfo::PROTOCOL_1_26_30);
 		$this->playerPosition = CommonTypes::getVector3($in);
 		$this->clickPosition = CommonTypes::getVector3($in);
 		$this->blockRuntimeId = VarInt::readUnsignedInt($in);
@@ -137,11 +133,7 @@ class UseItemTransactionData extends TransactionData{
 			VarInt::writeSignedInt($out, $this->face);
 		}
 		VarInt::writeSignedInt($out, $this->hotbarSlot);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			CommonTypes::putItemStackWrapper($out, $this->itemInHand);
-		}else{
-			CommonTypes::putItemStackWrapper($out, $this->itemInHand);
-		}
+		CommonTypes::putItemStackWrapper($out, $protocolId, $this->itemInHand, $protocolId >= ProtocolInfo::PROTOCOL_1_26_30);
 		CommonTypes::putVector3($out, $this->playerPosition);
 		CommonTypes::putVector3($out, $this->clickPosition);
 		VarInt::writeUnsignedInt($out, $this->blockRuntimeId);

@@ -21,10 +21,22 @@ use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 use pocketmine\network\mcpe\protocol\types\ChunkPosition;
 use pocketmine\network\mcpe\protocol\types\DimensionIds;
+use pocketmine\utils\Limits;
 use function count;
+use const PHP_INT_MAX;
 
 class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::LEVEL_CHUNK_PACKET;
+
+	/**
+	 * Client will request all subchunks as needed up to the top of the world.
+	 */
+	private const CLIENT_REQUEST_FULL_COLUMN_FAKE_COUNT = Limits::UINT32_MAX;
+	/**
+	 * Client will request subchunks as needed up to the height written in the packet, and assume that anything above
+	 * that height is air (wtf mojang ...).
+	 */
+	private const CLIENT_REQUEST_TRUNCATED_COLUMN_FAKE_COUNT = Limits::UINT32_MAX - 1;
 
 	//this appears large enough for a world height of 1024 blocks - it may need to be increased in the future
 	private const MAX_BLOB_HASHES = 64;
@@ -97,17 +109,33 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 			$this->dimensionId = VarInt::readSignedInt($in);
 		}
 
-		$this->subChunkCount = VarInt::readUnsignedInt($in);
-		$this->subChunkRequestLimit = CommonTypes::readOptional($in, VarInt::readSignedInt(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$this->subChunkCount = VarInt::readUnsignedInt($in);
+			$this->subChunkRequestLimit = CommonTypes::readOptional($in, VarInt::readSignedInt(...));
+		}else{
+			$subChunkCountButNotReally = VarInt::readUnsignedInt($in);
+			if($subChunkCountButNotReally === self::CLIENT_REQUEST_FULL_COLUMN_FAKE_COUNT){
+				$this->subChunkRequestLimit = PHP_INT_MAX;
+				$this->subChunkCount = PHP_INT_MAX;
+			}elseif($subChunkCountButNotReally === self::CLIENT_REQUEST_TRUNCATED_COLUMN_FAKE_COUNT){
+				$this->subChunkRequestLimit = LE::readUnsignedShort($in);
+				$this->subChunkCount = $this->subChunkRequestLimit;
+			}else{
+				$this->subChunkRequestLimit = null;
+				$this->subChunkCount = $subChunkCountButNotReally;
+			}
+		}
 
 		$this->cacheEnabled = CommonTypes::getBool($in);
 		$this->usedBlobHashes = [];
-		$count = VarInt::readUnsignedInt($in);
-		if($count > self::MAX_BLOB_HASHES){
-			throw new PacketDecodeException("Expected at most " . self::MAX_BLOB_HASHES . " blob hashes, got " . $count);
-		}
-		for($i = 0; $i < $count; ++$i){
-			$this->usedBlobHashes[] = LE::readUnsignedLong($in);
+		if($this->cacheEnabled || $protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$count = VarInt::readUnsignedInt($in);
+			if($count > self::MAX_BLOB_HASHES){
+				throw new PacketDecodeException("Expected at most " . self::MAX_BLOB_HASHES . " blob hashes, got " . $count);
+			}
+			for($i = 0; $i < $count; ++$i){
+				$this->usedBlobHashes[] = LE::readUnsignedLong($in);
+			}
 		}
 
 		$this->extraPayload = CommonTypes::getString($in);
@@ -119,15 +147,26 @@ class LevelChunkPacket extends DataPacket implements ClientboundPacket{
 			VarInt::writeSignedInt($out, $this->dimensionId);
 		}
 
-		VarInt::writeUnsignedInt($out, $this->subChunkCount);
-		CommonTypes::writeOptional($out, $this->subChunkRequestLimit, VarInt::writeSignedInt(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			VarInt::writeUnsignedInt($out, $this->subChunkCount);
+			CommonTypes::writeOptional($out, $this->subChunkRequestLimit, VarInt::writeSignedInt(...));
+		}elseif($this->subChunkRequestLimit === null){
+			VarInt::writeUnsignedInt($out, $this->subChunkCount);
+		}elseif($this->subChunkRequestLimit === PHP_INT_MAX){
+			VarInt::writeUnsignedInt($out, self::CLIENT_REQUEST_FULL_COLUMN_FAKE_COUNT);
+		}else{
+			VarInt::writeUnsignedInt($out, self::CLIENT_REQUEST_TRUNCATED_COLUMN_FAKE_COUNT);
+			LE::writeUnsignedShort($out, $this->subChunkRequestLimit);
+		}
 
 		CommonTypes::putBool($out, $this->cacheEnabled);
-		//these are always written as of 26.40. Not sure why they don't just make an optional out of it since they seem
-		//to like optional lists so much
-		VarInt::writeUnsignedInt($out, count($this->usedBlobHashes));
-		foreach($this->usedBlobHashes as $hash){
-			LE::writeUnsignedLong($out, $hash);
+		if($this->cacheEnabled || $protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			//these are always written as of 26.40. Not sure why they don't just make an optional out of it since they seem
+			//to like optional lists so much
+			VarInt::writeUnsignedInt($out, count($this->usedBlobHashes));
+			foreach($this->usedBlobHashes as $hash){
+				LE::writeUnsignedLong($out, $hash);
+			}
 		}
 
 		CommonTypes::putString($out, $this->extraPayload);

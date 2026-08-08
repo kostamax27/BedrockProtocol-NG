@@ -44,11 +44,7 @@ class MobEquipmentPacket extends DataPacket implements ClientboundPacket, Server
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->actorRuntimeId = CommonTypes::getActorRuntimeId($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
-			$this->item = CommonTypes::getItemStackWrapper($in);
-		}else{
-			$this->item = CommonTypes::getItemStackWrapper($in);
-		}
+		$this->item = CommonTypes::getItemStackWrapper($in, $protocolId, $protocolId >= ProtocolInfo::PROTOCOL_1_26_20);
 		$this->inventorySlot = Byte::readUnsigned($in);
 		$this->hotbarSlot = Byte::readUnsigned($in);
 		$this->windowId = Byte::readUnsigned($in);
@@ -56,11 +52,7 @@ class MobEquipmentPacket extends DataPacket implements ClientboundPacket, Server
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
-			CommonTypes::putItemStackWrapper($out, $this->item);
-		}else{
-			CommonTypes::putItemStackWrapper($out, $this->item);
-		}
+		CommonTypes::putItemStackWrapper($out, $protocolId, $this->item, $protocolId >= ProtocolInfo::PROTOCOL_1_26_20);
 		Byte::writeUnsigned($out, $this->inventorySlot);
 		Byte::writeUnsigned($out, $this->hotbarSlot);
 		Byte::writeUnsigned($out, $this->windowId);

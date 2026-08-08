@@ -23,4 +23,7 @@ enum ItemDescriptorType : string{
 	case STRING_ID_META = "name";
 	case MOLANG = "molang";
 	case TAG = "item_tag";
+	//no longer sent since 1.26.40 - declared last so that the ordinals of the cases above stay intact
+	case INT_ID_META = "int_id_meta";
+	case COMPLEX_ALIAS = "complex_alias";
 }

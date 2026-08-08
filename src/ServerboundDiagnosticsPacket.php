@@ -168,11 +168,21 @@ class ServerboundDiagnosticsPacket extends DataPacket implements ServerboundPack
 		$this->avgRemainderTimePercent = LE::readFloat($in);
 		$this->avgUnaccountedTimePercent = LE::readFloat($in);
 
-		$this->memoryCategoryValues = CommonTypes::readList($in, MemoryCategoryCounter::read(...));
-		$this->entityDiagnostics = CommonTypes::readList($in, EntityDiagnosticTimingInfo::read(...));
-		$this->systemDiagnostics = CommonTypes::readList($in, SystemDiagnosticTimingInfo::read(...));
-		$this->systemCategories = CommonTypes::readList($in, SystemCategory::read(...));
-		$this->whiskerScopes = CommonTypes::readList($in, WhiskerScopeDataSummary::read(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_0){
+			$this->memoryCategoryValues = CommonTypes::readList($in, MemoryCategoryCounter::read(...));
+
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
+				$this->entityDiagnostics = CommonTypes::readList($in, EntityDiagnosticTimingInfo::read(...));
+				$this->systemDiagnostics = CommonTypes::readList($in, SystemDiagnosticTimingInfo::read(...));
+
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+					$this->systemCategories = CommonTypes::readList($in, SystemCategory::read(...));
+				}
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+					$this->whiskerScopes = CommonTypes::readList($in, WhiskerScopeDataSummary::read(...));
+				}
+			}
+		}
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
@@ -186,11 +196,21 @@ class ServerboundDiagnosticsPacket extends DataPacket implements ServerboundPack
 		LE::writeFloat($out, $this->avgRemainderTimePercent);
 		LE::writeFloat($out, $this->avgUnaccountedTimePercent);
 
-		CommonTypes::writeList($out, $this->memoryCategoryValues, static fn($out, $v) => $v->write($out));
-		CommonTypes::writeList($out, $this->entityDiagnostics, static fn($out, $v) => $v->write($out));
-		CommonTypes::writeList($out, $this->systemDiagnostics, static fn($out, $v) => $v->write($out));
-		CommonTypes::writeList($out, $this->systemCategories, static fn($out, $v) => $v->write($out));
-		CommonTypes::writeList($out, $this->whiskerScopes, static fn($out, $v) => $v->write($out));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_0){
+			CommonTypes::writeList($out, $this->memoryCategoryValues, static fn($out, $v) => $v->write($out));
+
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
+				CommonTypes::writeList($out, $this->entityDiagnostics, static fn($out, $v) => $v->write($out));
+				CommonTypes::writeList($out, $this->systemDiagnostics, static fn($out, $v) => $v->write($out));
+
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+					CommonTypes::writeList($out, $this->systemCategories, static fn($out, $v) => $v->write($out));
+				}
+				if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
+					CommonTypes::writeList($out, $this->whiskerScopes, static fn($out, $v) => $v->write($out));
+				}
+			}
+		}
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

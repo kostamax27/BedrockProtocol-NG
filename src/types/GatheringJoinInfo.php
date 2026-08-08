@@ -56,13 +56,22 @@ final class GatheringJoinInfo{
 	public static function read(ByteBufferReader $in, int $protocolId) : self{
 		$experienceId = CommonTypes::getUUID($in);
 		$experienceName = CommonTypes::getString($in);
-		$experienceWorldId = CommonTypes::readOptional($in, CommonTypes::getUUID(...));
-		$experienceWorldName = CommonTypes::readOptional($in, CommonTypes::getString(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			$experienceWorldId = CommonTypes::readOptional($in, CommonTypes::getUUID(...));
+			$experienceWorldName = CommonTypes::readOptional($in, CommonTypes::getString(...));
+		}else{
+			$experienceWorldId = CommonTypes::getUUID($in);
+			$experienceWorldName = CommonTypes::getString($in);
+		}
 		$creatorId = CommonTypes::getString($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_10){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			$targetId = CommonTypes::readOptional($in, CommonTypes::getUUID(...));
 			$scenarioId = CommonTypes::readOptional($in, CommonTypes::getString(...));
 			$serverId = CommonTypes::readOptional($in, CommonTypes::getString(...));
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_10){
+			$targetId = CommonTypes::getUUID($in);
+			$scenarioId = CommonTypes::getString($in);
+			$serverId = CommonTypes::getString($in);
 		}
 
 		return new self(
@@ -80,13 +89,22 @@ final class GatheringJoinInfo{
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putUUID($out, $this->experienceId);
 		CommonTypes::putString($out, $this->experienceName);
-		CommonTypes::writeOptional($out, $this->experienceWorldId, CommonTypes::putUUID(...));
-		CommonTypes::writeOptional($out, $this->experienceWorldName, CommonTypes::putString(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeOptional($out, $this->experienceWorldId, CommonTypes::putUUID(...));
+			CommonTypes::writeOptional($out, $this->experienceWorldName, CommonTypes::putString(...));
+		}else{
+			CommonTypes::putUUID($out, $this->experienceWorldId ?? throw new \InvalidArgumentException("experienceWorldId must be set"));
+			CommonTypes::putString($out, $this->experienceWorldName ?? throw new \InvalidArgumentException("experienceWorldName must be set"));
+		}
 		CommonTypes::putString($out, $this->creatorId);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_10){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
 			CommonTypes::writeOptional($out, $this->targetId, CommonTypes::putUUID(...));
 			CommonTypes::writeOptional($out, $this->scenarioId, CommonTypes::putString(...));
 			CommonTypes::writeOptional($out, $this->serverId, CommonTypes::putString(...));
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_26_10){
+			CommonTypes::putUUID($out, $this->targetId ?? throw new \InvalidArgumentException("targetId must be set"));
+			CommonTypes::putString($out, $this->scenarioId ?? throw new \InvalidArgumentException("scenarioId must be set"));
+			CommonTypes::putString($out, $this->serverId ?? throw new \InvalidArgumentException("serverId must be set"));
 		}
 	}
 }

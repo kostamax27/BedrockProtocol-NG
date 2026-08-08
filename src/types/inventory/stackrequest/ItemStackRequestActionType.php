@@ -27,8 +27,6 @@ final class ItemStackRequestActionType{
 	public const DESTROY = 4;
 	public const CRAFTING_CONSUME_INPUT = 5;
 	public const CRAFTING_CREATE_SPECIFIC_RESULT = 6;
-	public const PLACE_INTO_BUNDLE = 7;
-	public const TAKE_FROM_BUNDLE = 8;
 	public const LAB_TABLE_COMBINE = 7;
 	public const BEACON_PAYMENT = 8;
 	public const MINE_BLOCK = 9;
@@ -40,6 +38,8 @@ final class ItemStackRequestActionType{
 	public const CRAFTING_LOOM = 15;
 	public const CRAFTING_NON_IMPLEMENTED_DEPRECATED_ASK_TY_LAING = 16;
 	public const CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING = 17; //no idea what this is for
+	public const PLACE_INTO_BUNDLE = 18; //no longer sent since 1.26.40
+	public const TAKE_FROM_BUNDLE = 19; //no longer sent since 1.26.40
 
 	public const INNER_TYPES = [
 		self::TAKE => 0,
@@ -49,8 +49,8 @@ final class ItemStackRequestActionType{
 		self::DESTROY => 4,
 		self::CRAFTING_CONSUME_INPUT => 5,
 		self::CRAFTING_CREATE_SPECIFIC_RESULT => 6,
-		//7 PlaceItemInContainer_DEPRECATED
-		//8 TakeItemFromContainer_DEPRECATED
+		self::PLACE_INTO_BUNDLE => 7, //PlaceItemInContainer_DEPRECATED since 1.26.40
+		self::TAKE_FROM_BUNDLE => 8, //TakeItemFromContainer_DEPRECATED since 1.26.40
 		self::LAB_TABLE_COMBINE => 9,
 		self::BEACON_PAYMENT => 10,
 		self::MINE_BLOCK => 11,

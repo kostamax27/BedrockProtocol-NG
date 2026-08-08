@@ -19,6 +19,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 /**
@@ -60,10 +61,38 @@ final class SubChunkPacketEntry{
 
 	public function getUsedBlobHash() : ?int{ return $this->usedBlobHash; }
 
-	public static function read(ByteBufferReader $in) : self{
+	public static function read(ByteBufferReader $in, int $protocolId, bool $cacheEnabled) : self{
 		$offset = SubChunkPositionOffset::read($in);
 
 		$requestResult = Byte::readUnsigned($in);
+
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
+			$data = !$cacheEnabled || $requestResult !== SubChunkRequestResult::SUCCESS_ALL_AIR ? CommonTypes::getString($in) : null;
+
+			$heightMapType = Byte::readUnsigned($in);
+			$heightMapData = $heightMapType === SubChunkPacketHeightMapType::DATA ? SubChunkPacketHeightMapInfo::read($in) : null;
+
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_90){
+				$renderHeightMapType = Byte::readUnsigned($in);
+				$renderHeightMapData = $renderHeightMapType === SubChunkPacketHeightMapType::DATA ? SubChunkPacketHeightMapInfo::read($in) : null;
+			}else{
+				$renderHeightMapType = SubChunkPacketHeightMapType::ALL_COPIED;
+				$renderHeightMapData = null;
+			}
+
+			$blobHash = $cacheEnabled ? LE::readUnsignedLong($in) : null;
+
+			return new self(
+				$offset,
+				$requestResult,
+				$data,
+				$heightMapType,
+				$heightMapData,
+				$renderHeightMapType,
+				$renderHeightMapData,
+				$blobHash
+			);
+		}
 
 		$data = CommonTypes::readOptional($in, CommonTypes::getString(...));
 
@@ -94,10 +123,29 @@ final class SubChunkPacketEntry{
 		);
 	}
 
-	public function write(ByteBufferWriter $out) : void{
+	public function write(ByteBufferWriter $out, int $protocolId, bool $cacheEnabled) : void{
 		$this->offset->write($out);
 
 		Byte::writeUnsigned($out, $this->requestResult);
+
+		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
+			if(!$cacheEnabled || $this->requestResult !== SubChunkRequestResult::SUCCESS_ALL_AIR){
+				CommonTypes::putString($out, $this->terrainData ?? "");
+			}
+
+			Byte::writeUnsigned($out, $this->heightMapType);
+			$this->heightMapData?->write($out);
+
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_21_90){
+				Byte::writeUnsigned($out, $this->renderHeightMapType);
+				$this->renderHeightMapData?->write($out);
+			}
+
+			if($cacheEnabled){
+				LE::writeUnsignedLong($out, $this->usedBlobHash ?? throw new \InvalidArgumentException("usedBlobHash must be set when the client cache is enabled"));
+			}
+			return;
+		}
 
 		CommonTypes::writeOptional($out, $this->terrainData, CommonTypes::putString(...));
 
