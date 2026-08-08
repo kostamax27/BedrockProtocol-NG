@@ -50,7 +50,9 @@ final class ItemStackResponseSlotInfo{
 		$slot = Byte::readUnsigned($in);
 		$hotbarSlot = Byte::readUnsigned($in);
 		$count = Byte::readUnsigned($in);
-		$itemStackId = CommonTypes::readDoubleOptional($in, CommonTypes::readServerItemStackId(...));
+		$itemStackId = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ?
+			CommonTypes::readDoubleOptional($in, CommonTypes::readServerItemStackId(...)) :
+			CommonTypes::readServerItemStackId($in);
 		$customName = CommonTypes::getString($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_50){
 			$filteredCustomName = CommonTypes::getString($in);
@@ -63,7 +65,11 @@ final class ItemStackResponseSlotInfo{
 		Byte::writeUnsigned($out, $this->slot);
 		Byte::writeUnsigned($out, $this->hotbarSlot);
 		Byte::writeUnsigned($out, $this->count);
-		CommonTypes::writeDoubleOptional($out, $this->itemStackId, CommonTypes::writeServerItemStackId(...));
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			CommonTypes::writeDoubleOptional($out, $this->itemStackId, CommonTypes::writeServerItemStackId(...));
+		}else{
+			CommonTypes::writeServerItemStackId($out, $this->itemStackId ?? throw new \InvalidArgumentException("itemStackId must be set before 1.26.40"));
+		}
 		CommonTypes::putString($out, $this->customName);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_50){
 			CommonTypes::putString($out, $this->filteredCustomName);

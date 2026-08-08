@@ -98,8 +98,8 @@ class NetworkInventoryAction{
 		}
 
 		$this->inventorySlot = VarInt::readUnsignedInt($in);
-		$this->oldItem = CommonTypes::getItemStackWrapper($in, $protocolId);
-		$this->newItem = CommonTypes::getItemStackWrapper($in, $protocolId);
+		$this->oldItem = CommonTypes::getItemStackWrapper($in, $protocolId, false);
+		$this->newItem = CommonTypes::getItemStackWrapper($in, $protocolId, false);
 
 		return $this;
 	}
@@ -141,8 +141,8 @@ class NetworkInventoryAction{
 		}
 
 		VarInt::writeUnsignedInt($out, $this->inventorySlot);
-		CommonTypes::putItemStackWrapper($out, $protocolId, $this->oldItem);
-		CommonTypes::putItemStackWrapper($out, $protocolId, $this->newItem);
+		CommonTypes::putItemStackWrapper($out, $protocolId, $this->oldItem, false);
+		CommonTypes::putItemStackWrapper($out, $protocolId, $this->newItem, false);
 	}
 
 	/**

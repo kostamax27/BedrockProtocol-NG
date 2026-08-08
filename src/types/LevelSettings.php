@@ -114,7 +114,7 @@ final class LevelSettings{
 		$this->createdInEditorMode = CommonTypes::getBool($in);
 		$this->exportedFromEditorMode = CommonTypes::getBool($in);
 		$this->time = VarInt::readSignedInt($in);
-		$this->eduEditionOffer = VarInt::readSignedInt($in);
+		$this->eduEditionOffer = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? VarInt::readUnsignedInt($in) : VarInt::readSignedInt($in);
 		$this->hasEduFeaturesEnabled = CommonTypes::getBool($in);
 		$this->eduProductUUID = CommonTypes::getString($in);
 		$this->rainLevel = LE::readFloat($in);
@@ -182,7 +182,11 @@ final class LevelSettings{
 		CommonTypes::putBool($out, $this->createdInEditorMode);
 		CommonTypes::putBool($out, $this->exportedFromEditorMode);
 		VarInt::writeSignedInt($out, $this->time);
-		VarInt::writeSignedInt($out, $this->eduEditionOffer);
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+			VarInt::writeUnsignedInt($out, $this->eduEditionOffer);
+		}else{
+			VarInt::writeSignedInt($out, $this->eduEditionOffer);
+		}
 		CommonTypes::putBool($out, $this->hasEduFeaturesEnabled);
 		CommonTypes::putString($out, $this->eduProductUUID);
 		LE::writeFloat($out, $this->rainLevel);

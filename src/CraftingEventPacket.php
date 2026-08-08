@@ -56,12 +56,12 @@ class CraftingEventPacket extends DataPacket implements ServerboundPacket{
 
 		$size = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $size and $i < 128; ++$i){
-			$this->input[] = CommonTypes::getItemStackWrapper($in, $protocolId);
+			$this->input[] = CommonTypes::getItemStackWrapper($in, $protocolId, false);
 		}
 
 		$size = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $size and $i < 128; ++$i){
-			$this->output[] = CommonTypes::getItemStackWrapper($in, $protocolId);
+			$this->output[] = CommonTypes::getItemStackWrapper($in, $protocolId, false);
 		}
 	}
 
@@ -72,12 +72,12 @@ class CraftingEventPacket extends DataPacket implements ServerboundPacket{
 
 		VarInt::writeUnsignedInt($out, count($this->input));
 		foreach($this->input as $item){
-			CommonTypes::putItemStackWrapper($out, $protocolId, $item);
+			CommonTypes::putItemStackWrapper($out, $protocolId, $item, false);
 		}
 
 		VarInt::writeUnsignedInt($out, count($this->output));
 		foreach($this->output as $item){
-			CommonTypes::putItemStackWrapper($out, $protocolId, $item);
+			CommonTypes::putItemStackWrapper($out, $protocolId, $item, false);
 		}
 	}
 

@@ -68,7 +68,7 @@ class ResourcePackClientResponsePacket extends DataPacket implements Serverbound
 				}
 			}
 		}else{
-			$this->status = Byte::readUnsigned($in);
+			$this->status = Byte::readUnsigned($in) - 1;
 			$entryCount = LE::readUnsignedShort($in);
 			$this->packIds = [];
 			while($entryCount-- > 0){
@@ -91,7 +91,7 @@ class ResourcePackClientResponsePacket extends DataPacket implements Serverbound
 				}
 			}
 		}else{
-			Byte::writeUnsigned($out, $this->status);
+			Byte::writeUnsigned($out, $this->status + 1);
 			LE::writeUnsignedShort($out, count($this->packIds));
 			foreach($this->packIds as $id){
 				CommonTypes::putString($out, $id);

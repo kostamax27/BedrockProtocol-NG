@@ -375,9 +375,9 @@ final class CommonTypes{
 	 * @phpstan-return array{0: int, 1: int, 2: int}
 	 * @throws DataDecodeException
 	 */
-	private static function getItemStackHeader(ByteBufferReader $in) : array{
+	private static function getItemStackHeader(ByteBufferReader $in, int $protocolId) : array{
 		$id = VarInt::readSignedInt($in);
-		if($id === 0){
+		if($id === 0 && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
 			return [0, 0, 0];
 		}
 
@@ -387,8 +387,8 @@ final class CommonTypes{
 		return [$id, $count, $meta];
 	}
 
-	private static function putItemStackHeader(ByteBufferWriter $out, ItemStack $itemStack) : bool{
-		if($itemStack->getId() === 0){
+	private static function putItemStackHeader(ByteBufferWriter $out, int $protocolId, ItemStack $itemStack) : bool{
+		if($itemStack->getId() === 0 && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
 			VarInt::writeSignedInt($out, 0);
 			return false;
 		}
@@ -419,45 +419,26 @@ final class CommonTypes{
 	 * @throws DataDecodeException
 	 */
 	public static function getItemStackWithoutStackId(ByteBufferReader $in, int $protocolId) : ItemStack{
-		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
-			[$id, $count, $meta] = self::getItemStackHeader($in);
+		[$id, $count, $meta] = self::getItemStackHeader($in, $protocolId);
 
-			return $id !== 0 ? self::getItemStackFooter($in, $id, $meta, $count) : ItemStack::null();
-		}
-
-		$id = VarInt::readSignedInt($in);
-		$count = LE::readUnsignedShort($in);
-		$meta = VarInt::readUnsignedInt($in);
-
-		$blockRuntimeId = VarInt::readSignedInt($in);
-		$rawExtraData = self::getString($in);
-
-		return new ItemStack($id, $meta, $count, $blockRuntimeId, $rawExtraData);
+		return ($id !== 0 || $protocolId >= ProtocolInfo::PROTOCOL_1_26_40) ?
+			self::getItemStackFooter($in, $id, $meta, $count) :
+			ItemStack::null();
 	}
 
 	public static function putItemStackWithoutStackId(ByteBufferWriter $out, int $protocolId, ItemStack $itemStack) : void{
-		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40){
-			if(self::putItemStackHeader($out, $itemStack)){
-				self::putItemStackFooter($out, $itemStack);
-			}
-			return;
+		if(self::putItemStackHeader($out, $protocolId, $itemStack)){
+			self::putItemStackFooter($out, $itemStack);
 		}
-
-		VarInt::writeSignedInt($out, $itemStack->getId());
-		LE::writeUnsignedShort($out, $itemStack->getCount());
-		VarInt::writeUnsignedInt($out, $itemStack->getMeta());
-
-		VarInt::writeSignedInt($out, $itemStack->getBlockRuntimeId());
-		self::putString($out, $itemStack->getRawExtraData());
 	}
 
 	/**
 	 * @throws DataDecodeException
 	 */
-	public static function getItemStackWrapper(ByteBufferReader $in, int $protocolId, bool $networkDescriptor = false) : ItemStackWrapper{
-		if(!$networkDescriptor && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
-			[$id, $count, $meta] = self::getItemStackHeader($in);
-			if($id === 0){
+	public static function getItemStackWrapper(ByteBufferReader $in, int $protocolId, bool $networkDescriptor) : ItemStackWrapper{
+		if(!$networkDescriptor){
+			[$id, $count, $meta] = self::getItemStackHeader($in, $protocolId);
+			if($id === 0 && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
 				return new ItemStackWrapper(0, ItemStack::null());
 			}
 
@@ -486,10 +467,10 @@ final class CommonTypes{
 		return new ItemStackWrapper($stackId, new ItemStack($id, $meta, $count, $blockRuntimeId, $rawExtraData), $variant);
 	}
 
-	public static function putItemStackWrapper(ByteBufferWriter $out, int $protocolId, ItemStackWrapper $itemStackWrapper, bool $networkDescriptor = false) : void{
-		if(!$networkDescriptor && $protocolId < ProtocolInfo::PROTOCOL_1_26_40){
+	public static function putItemStackWrapper(ByteBufferWriter $out, int $protocolId, ItemStackWrapper $itemStackWrapper, bool $networkDescriptor) : void{
+		if(!$networkDescriptor){
 			$itemStack = $itemStackWrapper->getItemStack();
-			if(self::putItemStackHeader($out, $itemStack)){
+			if(self::putItemStackHeader($out, $protocolId, $itemStack)){
 				$hasNetId = $itemStackWrapper->getStackId() !== 0;
 				self::putBool($out, $hasNetId);
 				if($hasNetId){
