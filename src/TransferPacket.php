@@ -18,6 +18,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\LE;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use pocketmine\network\mcpe\protocol\types\GatheringJoinInfo;
 
 class TransferPacket extends DataPacket implements ClientboundPacket{
 	public const NETWORK_ID = ProtocolInfo::TRANSFER_PACKET;
@@ -25,32 +26,32 @@ class TransferPacket extends DataPacket implements ClientboundPacket{
 	public string $address;
 	public int $port = 19132;
 	public bool $reloadWorld;
+	public ?GatheringJoinInfo $gatheringsConfig = null;
 
 	/**
 	 * @generate-create-func
 	 */
-	public static function create(string $address, int $port, bool $reloadWorld) : self{
+	public static function create(string $address, int $port, bool $reloadWorld, ?GatheringJoinInfo $gatheringsConfig) : self{
 		$result = new self;
 		$result->address = $address;
 		$result->port = $port;
 		$result->reloadWorld = $reloadWorld;
+		$result->gatheringsConfig = $gatheringsConfig;
 		return $result;
 	}
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->address = CommonTypes::getString($in);
 		$this->port = LE::readUnsignedShort($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
-			$this->reloadWorld = CommonTypes::getBool($in);
-		}
+		$this->reloadWorld = CommonTypes::getBool($in);
+		$this->gatheringsConfig = CommonTypes::readOptional($in, GatheringJoinInfo::read(...));
 	}
 
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->address);
 		LE::writeUnsignedShort($out, $this->port);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_30){
-			CommonTypes::putBool($out, $this->reloadWorld);
-		}
+		CommonTypes::putBool($out, $this->reloadWorld);
+		CommonTypes::writeOptional($out, $this->gatheringsConfig, static fn($out, $v) => $v->write($out));
 	}
 
 	public function handle(PacketHandlerInterface $handler) : bool{

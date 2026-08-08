@@ -12,17 +12,18 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\network\mcpe\protocol\types;
+namespace pocketmine\network\mcpe\protocol\types\sound;
 
-use pmmp\encoding\ByteBufferWriter;
+use pocketmine\network\mcpe\protocol\types\PacketIntEnumTrait;
 
-final class PlayerBlockActionStopBreak implements PlayerBlockAction{
+enum SoundDataEventType : int{
+	use PacketIntEnumTrait;
 
-	public function getActionType() : int{
-		return PlayerAction::STOP_BREAK;
-	}
-
-	public function write(ByteBufferWriter $out) : void{
-		//NOOP
-	}
+	case STOP = 0;
+	case SET_VOLUME = 1;
+	case SET_PITCH = 2;
+	case FADE = 3;
+	case SEEK_TO = 4;
+	case PAUSE = 5;
+	case RESUME = 6;
 }

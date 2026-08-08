@@ -14,17 +14,11 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types;
 
-final class SubChunkPacketEntryWithCacheList{
+enum ScorePacketEntryAction : string{
+	use PacketOrdinalEnumTrait;
 
-	/**
-	 * @param SubChunkPacketEntryWithCache[] $entries
-	 */
-	public function __construct(
-		private array $entries
-	){}
-
-	/**
-	 * @return SubChunkPacketEntryWithCache[]
-	 */
-	public function getEntries() : array{ return $this->entries; }
+	case REMOVE = "remove";
+	case CHANGE_PLAYER = "changeplayer";
+	case CHANGE_ENTITY = "changeentity";
+	case CHANGE_FAKE_PLAYER = "changefakeplayer";
 }

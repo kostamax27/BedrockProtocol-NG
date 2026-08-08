@@ -17,19 +17,20 @@ namespace pocketmine\network\mcpe\protocol\types;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 
-final class SubChunkPacketEntryWithoutCache{
+final class NullGameRule extends GameRule{
+	use GetTypeIdFromConstTrait;
 
-	public function __construct(
-		private SubChunkPacketEntryCommon $base
-	){}
+	public const ID = GameRuleType::NULL;
 
-	public function getBase() : SubChunkPacketEntryCommon{ return $this->base; }
-
-	public static function read(ByteBufferReader $in, int $protocolId) : self{
-		return new self(SubChunkPacketEntryCommon::read($in, $protocolId, false));
+	public function __construct(bool $isPlayerModifiable){
+		parent::__construct($isPlayerModifiable);
 	}
 
-	public function write(ByteBufferWriter $out, int $protocolId) : void{
-		$this->base->write($out, $protocolId, false);
+	public function encode(ByteBufferWriter $out) : void{
+		//NOOP
+	}
+
+	public static function decode(ByteBufferReader $in, bool $isPlayerModifiable) : self{
+		return new self($isPlayerModifiable);
 	}
 }

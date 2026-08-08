@@ -50,7 +50,7 @@ final class DebugMarkerData{
 				(int) (LE::readFloat($in) * 255)
 			);
 		}else{
-			$color = Color::fromARGB(LE::readUnsignedInt($in));
+			$color = CommonTypes::readColor($in);
 		}
 		$durationMillis = LE::readUnsignedLong($in);
 
@@ -65,14 +65,7 @@ final class DebugMarkerData{
 	public function write(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putString($out, $this->text);
 		CommonTypes::putVector3($out, $this->position);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_130){
-			LE::writeFloat($out, $this->color->getR() / 255);
-			LE::writeFloat($out, $this->color->getG() / 255);
-			LE::writeFloat($out, $this->color->getB() / 255);
-			LE::writeFloat($out, $this->color->getA() / 255);
-		}else{
-			LE::writeUnsignedInt($out, $this->color->toARGB());
-		}
+		CommonTypes::writeColor($out, $this->color);
 		LE::writeUnsignedLong($out, $this->durationMillis);
 	}
 }

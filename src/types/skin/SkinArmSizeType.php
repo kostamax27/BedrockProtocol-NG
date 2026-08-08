@@ -12,18 +12,13 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\network\mcpe\protocol\types\recipe;
+namespace pocketmine\network\mcpe\protocol\types\skin;
 
-use pmmp\encoding\ByteBufferWriter;
+use pocketmine\network\mcpe\protocol\types\PacketOrdinalEnumTrait;
 
-abstract class RecipeWithTypeId{
-	protected function __construct(
-		private int $typeId
-	){}
+enum SkinArmSizeType : string{
+	use PacketOrdinalEnumTrait;
 
-	final public function getTypeId() : int{
-		return $this->typeId;
-	}
-
-	abstract public function encode(ByteBufferWriter $out, int $protocolId) : void;
+	case SLIM = "slim";
+	case WIDE = "wide";
 }

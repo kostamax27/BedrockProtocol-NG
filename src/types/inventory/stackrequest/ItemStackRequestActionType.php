@@ -29,15 +29,38 @@ final class ItemStackRequestActionType{
 	public const CRAFTING_CREATE_SPECIFIC_RESULT = 6;
 	public const PLACE_INTO_BUNDLE = 7;
 	public const TAKE_FROM_BUNDLE = 8;
-	public const LAB_TABLE_COMBINE = 9;
-	public const BEACON_PAYMENT = 10;
-	public const MINE_BLOCK = 11;
-	public const CRAFTING_RECIPE = 12;
-	public const CRAFTING_RECIPE_AUTO = 13; //recipe book?
-	public const CREATIVE_CREATE = 14;
-	public const CRAFTING_RECIPE_OPTIONAL = 15; //anvil/cartography table rename
-	public const CRAFTING_GRINDSTONE = 16;
-	public const CRAFTING_LOOM = 17;
-	public const CRAFTING_NON_IMPLEMENTED_DEPRECATED_ASK_TY_LAING = 18;
-	public const CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING = 19; //no idea what this is for
+	public const LAB_TABLE_COMBINE = 7;
+	public const BEACON_PAYMENT = 8;
+	public const MINE_BLOCK = 9;
+	public const CRAFTING_RECIPE = 10;
+	public const CRAFTING_RECIPE_AUTO = 11; //recipe book?
+	public const CREATIVE_CREATE = 12;
+	public const CRAFTING_RECIPE_OPTIONAL = 13; //anvil/cartography table rename
+	public const CRAFTING_GRINDSTONE = 14;
+	public const CRAFTING_LOOM = 15;
+	public const CRAFTING_NON_IMPLEMENTED_DEPRECATED_ASK_TY_LAING = 16;
+	public const CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING = 17; //no idea what this is for
+
+	public const INNER_TYPES = [
+		self::TAKE => 0,
+		self::PLACE => 1,
+		self::SWAP => 2,
+		self::DROP => 3,
+		self::DESTROY => 4,
+		self::CRAFTING_CONSUME_INPUT => 5,
+		self::CRAFTING_CREATE_SPECIFIC_RESULT => 6,
+		//7 PlaceItemInContainer_DEPRECATED
+		//8 TakeItemFromContainer_DEPRECATED
+		self::LAB_TABLE_COMBINE => 9,
+		self::BEACON_PAYMENT => 10,
+		self::MINE_BLOCK => 11,
+		self::CRAFTING_RECIPE => 12,
+		self::CRAFTING_RECIPE_AUTO => 13, //recipe book?
+		self::CREATIVE_CREATE => 14,
+		self::CRAFTING_RECIPE_OPTIONAL => 15, //anvil/cartography table rename
+		self::CRAFTING_GRINDSTONE => 16,
+		self::CRAFTING_LOOM => 17,
+		self::CRAFTING_NON_IMPLEMENTED_DEPRECATED_ASK_TY_LAING => 18,
+		self::CRAFTING_RESULTS_DEPRECATED_ASK_TY_LAING => 19, //no idea what this is for
+	];
 }

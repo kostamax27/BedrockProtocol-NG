@@ -14,13 +14,12 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types;
 
+use pmmp\encoding\BE;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\DataDecodeException;
-use pmmp\encoding\VarInt;
 use pocketmine\color\Color;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
-use pocketmine\utils\Binary;
 use function count;
 
 final class MapImage{
@@ -79,8 +78,7 @@ final class MapImage{
 			$serializer = new ByteBufferWriter();
 			for($y = 0; $y < $this->height; ++$y){
 				for($x = 0; $x < $this->width; ++$x){
-					//if mojang had any sense this would just be a regular LE int
-					VarInt::writeUnsignedInt($serializer, Binary::flipIntEndianness($this->pixels[$y][$x]->toRGBA()));
+					BE::writeSignedInt($serializer, $this->pixels[$y][$x]->toRGBA());
 				}
 			}
 			$this->encodedPixelCache = $serializer->getData();
@@ -105,7 +103,7 @@ final class MapImage{
 		for($y = 0; $y < $height; ++$y){
 			$row = [];
 			for($x = 0; $x < $width; ++$x){
-				$row[] = Color::fromRGBA(Binary::flipIntEndianness(VarInt::readUnsignedInt($in)));
+				$row[] = Color::fromRGBA(BE::readSignedInt($in));
 			}
 			$pixels[] = $row;
 		}

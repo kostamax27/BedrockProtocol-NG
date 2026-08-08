@@ -243,7 +243,7 @@ final class PacketShapeData{
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_20){
 			$maximumRenderDistance = CommonTypes::readOptional($in, LE::readFloat(...));
 		}
-		$color = CommonTypes::readOptional($in, fn() => Color::fromARGB(LE::readUnsignedInt($in)));
+		$color = CommonTypes::readOptional($in, CommonTypes::readColor(...));
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_120){
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_0){
 				$dimensionId = CommonTypes::readOptional($in, VarInt::readSignedInt(...));
@@ -318,7 +318,7 @@ final class PacketShapeData{
 			CommonTypes::writeOptional($out, $this->totalTimeLeft, LE::writeFloat(...));
 		}
 		CommonTypes::writeOptional($out, $this->maximumRenderDistance, LE::writeFloat(...));
-		CommonTypes::writeOptional($out, $this->color, fn(ByteBufferWriter $out, Color $color) => LE::writeUnsignedInt($out, $color->toARGB()));
+		CommonTypes::writeOptional($out, $this->color, CommonTypes::writeColor(...));
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_120){
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_0){
 				CommonTypes::writeOptional($out, $this->dimensionId, VarInt::writeSignedInt(...));

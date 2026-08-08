@@ -14,21 +14,21 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\protocol\types\recipe;
 
-use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pmmp\encoding\LE;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
-use pocketmine\network\mcpe\protocol\types\GetTypeIdFromConstTrait;
 
 final class MolangItemDescriptor implements ItemDescriptor{
-	use GetTypeIdFromConstTrait;
-
-	public const ID = ItemDescriptorType::MOLANG;
 
 	public function __construct(
 		private string $molangExpression,
 		private int $molangVersion
 	){}
+
+	public function getDescriptorType() : ItemDescriptorType{
+		return ItemDescriptorType::MOLANG;
+	}
 
 	public function getMolangExpression() : string{ return $this->molangExpression; }
 
@@ -36,13 +36,13 @@ final class MolangItemDescriptor implements ItemDescriptor{
 
 	public static function read(ByteBufferReader $in) : self{
 		$expression = CommonTypes::getString($in);
-		$version = Byte::readUnsigned($in);
+		$version = LE::readUnsignedShort($in);
 
 		return new self($expression, $version);
 	}
 
 	public function write(ByteBufferWriter $out) : void{
 		CommonTypes::putString($out, $this->molangExpression);
-		Byte::writeUnsigned($out, $this->molangVersion);
+		LE::writeUnsignedShort($out, $this->molangVersion);
 	}
 }

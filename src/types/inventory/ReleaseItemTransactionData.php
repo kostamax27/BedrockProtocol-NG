@@ -60,7 +60,7 @@ class ReleaseItemTransactionData extends TransactionData{
 		}
 		$this->hotbarSlot = VarInt::readSignedInt($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			$this->itemInHand = CommonTypes::getNetworkItemStackDescriptor($in);
+			$this->itemInHand = CommonTypes::getItemStackWrapper($in);
 		}else{
 			$this->itemInHand = CommonTypes::getItemStackWrapper($in);
 		}
@@ -75,7 +75,7 @@ class ReleaseItemTransactionData extends TransactionData{
 		}
 		VarInt::writeSignedInt($out, $this->hotbarSlot);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_26_30){
-			CommonTypes::putNetworkItemStackDescriptor($out, $this->itemInHand);
+			CommonTypes::putItemStackWrapper($out, $this->itemInHand);
 		}else{
 			CommonTypes::putItemStackWrapper($out, $this->itemInHand);
 		}
@@ -96,6 +96,7 @@ class ReleaseItemTransactionData extends TransactionData{
 
 	/**
 	 * @param NetworkInventoryAction[] $actions
+	 * @phpstan-param list<NetworkInventoryAction> $actions
 	 */
 	public static function new(array $actions, int $actionType, int $hotbarSlot, ItemStackWrapper $itemInHand, Vector3 $headPosition) : self{
 		$result = self::initSelf($actionType, $hotbarSlot, $itemInHand, $headPosition);
