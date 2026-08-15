@@ -30,6 +30,11 @@ final class MapImage{
 	public const MAX_HEIGHT = 128;
 	public const MAX_WIDTH = 128;
 
+	/** < ProtocolInfo::PROTOCOL_1_26_40 */
+	private const PIXEL_FORMAT_LEGACY = 0;
+	/** >= ProtocolInfo::PROTOCOL_1_26_40 */
+	private const PIXEL_FORMAT_NEW = 1;
+
 	private int $width;
 	private int $height;
 	/**
@@ -37,7 +42,12 @@ final class MapImage{
 	 * @phpstan-var list<list<Color>>
 	 */
 	private array $pixels;
-	private ?string $encodedPixelCache = null;
+
+	/**
+	 * @var string[]
+	 * @phpstan-var array<self::PIXEL_FORMAT_*, string>
+	 */
+	private array $encodedPixelCache = [];
 
 	/**
 	 * @param Color[][] $pixels
@@ -77,21 +87,22 @@ final class MapImage{
 	public function getPixels() : array{ return $this->pixels; }
 
 	public function encode(ByteBufferWriter $out, int $protocolId) : void{
-		if($this->encodedPixelCache === null){
+		$format = $protocolId >= ProtocolInfo::PROTOCOL_1_26_40 ? self::PIXEL_FORMAT_NEW : self::PIXEL_FORMAT_LEGACY;
+		if(!isset($this->encodedPixelCache[$format])){
 			$serializer = new ByteBufferWriter();
 			for($y = 0; $y < $this->height; ++$y){
 				for($x = 0; $x < $this->width; ++$x){
-					if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+					if($format === self::PIXEL_FORMAT_NEW){
 						BE::writeSignedInt($serializer, $this->pixels[$y][$x]->toRGBA());
 					}else{
 						VarInt::writeUnsignedInt($serializer, Binary::flipIntEndianness($this->pixels[$y][$x]->toRGBA()));
 					}
 				}
 			}
-			$this->encodedPixelCache = $serializer->getData();
+			$this->encodedPixelCache[$format] = $serializer->getData();
 		}
 
-		$out->writeByteArray($this->encodedPixelCache);
+		$out->writeByteArray($this->encodedPixelCache[$format]);
 	}
 
 	/**
