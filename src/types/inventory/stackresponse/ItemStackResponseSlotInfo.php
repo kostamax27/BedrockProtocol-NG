@@ -28,7 +28,7 @@ final class ItemStackResponseSlotInfo{
 		private int $count,
 		private ?int $itemStackId,
 		private string $customName,
-		private string $filteredCustomName,
+		private ?string $filteredCustomName,
 		private int $durabilityCorrection
 	){}
 
@@ -42,7 +42,7 @@ final class ItemStackResponseSlotInfo{
 
 	public function getCustomName() : string{ return $this->customName; }
 
-	public function getFilteredCustomName() : string{ return $this->filteredCustomName; }
+	public function getFilteredCustomName() : ?string{ return $this->filteredCustomName; }
 
 	public function getDurabilityCorrection() : int{ return $this->durabilityCorrection; }
 
@@ -55,7 +55,7 @@ final class ItemStackResponseSlotInfo{
 			CommonTypes::readServerItemStackId($in);
 		$customName = CommonTypes::getString($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_50){
-			$filteredCustomName = CommonTypes::getString($in);
+			$filteredCustomName = CommonTypes::readOptional($in, CommonTypes::getString(...));
 		}
 		$durabilityCorrection = VarInt::readSignedInt($in);
 		return new self($slot, $hotbarSlot, $count, $itemStackId, $customName, $filteredCustomName ?? $customName, $durabilityCorrection);
@@ -72,7 +72,7 @@ final class ItemStackResponseSlotInfo{
 		}
 		CommonTypes::putString($out, $this->customName);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_50){
-			CommonTypes::putString($out, $this->filteredCustomName);
+			CommonTypes::writeOptional($out, $this->filteredCustomName, CommonTypes::putString(...));
 		}
 		VarInt::writeSignedInt($out, $this->durabilityCorrection);
 	}

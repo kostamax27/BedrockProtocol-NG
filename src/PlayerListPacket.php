@@ -41,13 +41,13 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 
 	public int $type;
 	/** @var PlayerListEntry[] */
-	private array $entries = [];
+	public array $entries = [];
 
 	/**
 	 * @generate-create-func
 	 * @param PlayerListEntry[] $entries
 	 */
-	private static function create(int $type, array $entries) : self{
+	public static function create(int $type, array $entries) : self{
 		$result = new self;
 		$result->type = $type;
 		$result->entries = $entries;
@@ -80,22 +80,20 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 
 		$count = VarInt::readUnsignedInt($in);
 		for($i = 0; $i < $count; ++$i){
+			$entry = new PlayerListEntry();
 			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
-				$type = VarInt::readUnsignedInt($in);
+				$entry->type = VarInt::readUnsignedInt($in);
 				$innerType = Byte::readUnsigned($in);
-				$expectedInnerType = self::INNER_TYPES[$type] ?? "unknown";
+				$expectedInnerType = self::INNER_TYPES[$entry->type] ?? "unknown";
 				if($innerType !== $expectedInnerType){
-					throw new PacketDecodeException("Unexpected inner type $innerType for player list entry type $type, expected $expectedInnerType");
+					throw new PacketDecodeException("Unexpected inner type $innerType for player list entry type $entry->type, expected $expectedInnerType");
 				}
+				$type = $entry->type;
 			}else{
 				$type = $this->type;
 			}
 
-			if($type === self::TYPE_REMOVE){
-				$this->entries[] = CommonTypes::getUUID($in);
-			}elseif($type === self::TYPE_ADD){
-				$entry = new PlayerListEntry();
-				$entry->type = $type;
+			if($type === self::TYPE_ADD){
 				$entry->uuid = CommonTypes::getUUID($in);
 				$entry->actorUniqueId = CommonTypes::getActorUniqueId($in);
 				$entry->username = CommonTypes::getString($in);
@@ -111,11 +109,12 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 						$entry->color = CommonTypes::readColor($in);
 					}
 				}
-
-				$this->entries[] = $entry;
+			}elseif($type === self::TYPE_REMOVE){
+				$entry->uuid = CommonTypes::getUUID($in);
 			}else{
 				throw new PacketDecodeException("Unknown player list entry type $type");
 			}
+			$this->entries[] = $entry;
 		}
 
 		if($protocolId < ProtocolInfo::PROTOCOL_1_26_40 && $this->type === self::TYPE_ADD){
@@ -139,9 +138,7 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 				throw new \InvalidArgumentException("Add and remove entries cannot be mixed in the same packet before 1.26.40");
 			}
 
-			if($entry->type === self::TYPE_REMOVE){
-				CommonTypes::putUUID($out, $entry->uuid);
-			}else{
+			if($entry->type === self::TYPE_ADD){
 				CommonTypes::putUUID($out, $entry->uuid);
 				CommonTypes::putActorUniqueId($out, $entry->actorUniqueId);
 				CommonTypes::putString($out, $entry->username);
@@ -157,6 +154,8 @@ class PlayerListPacket extends DataPacket implements ClientboundPacket{
 						CommonTypes::writeColor($out, $entry->color ?? new Color(255, 255, 255));
 					}
 				}
+			}else{
+				CommonTypes::putUUID($out, $entry->uuid);
 			}
 		}
 
