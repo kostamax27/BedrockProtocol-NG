@@ -55,7 +55,11 @@ final class ItemStackResponseSlotInfo{
 			CommonTypes::readServerItemStackId($in);
 		$customName = CommonTypes::getString($in);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_50){
-			$filteredCustomName = CommonTypes::readOptional($in, CommonTypes::getString(...));
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				$filteredCustomName = CommonTypes::readOptional($in, CommonTypes::getString(...));
+			}else{
+				$filteredCustomName = CommonTypes::getString($in);
+			}
 		}
 		$durabilityCorrection = VarInt::readSignedInt($in);
 		return new self($slot, $hotbarSlot, $count, $itemStackId, $customName, $filteredCustomName ?? $customName, $durabilityCorrection);
@@ -72,7 +76,11 @@ final class ItemStackResponseSlotInfo{
 		}
 		CommonTypes::putString($out, $this->customName);
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_50){
-			CommonTypes::writeOptional($out, $this->filteredCustomName, CommonTypes::putString(...));
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_40){
+				CommonTypes::writeOptional($out, $this->filteredCustomName, CommonTypes::putString(...));
+			}else{
+				CommonTypes::putString($out, $this->filteredCustomName ?? throw new \InvalidArgumentException("filteredCustomName must be set before 1.26.40"));
+			}
 		}
 		VarInt::writeSignedInt($out, $this->durabilityCorrection);
 	}
