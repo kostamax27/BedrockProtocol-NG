@@ -49,7 +49,6 @@ abstract class TransactionData{
 
 	/**
 	 * @throws DataDecodeException
-	 * @throws PacketDecodeException
 	 */
 	final public function decodeAuthInput(ByteBufferReader $in, int $protocolId) : void{
 		$this->actions = CommonTypes::readList($in, static fn($in) => (new NetworkInventoryAction())->readAuthInput($in, $protocolId));
