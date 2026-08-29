@@ -73,8 +73,8 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 				$entry->scoreboardId = VarInt::readSignedLong($in);
 
 				if($action === ScorePacketEntryAction::REMOVE){
-					if($protocolId >= ProtocolInfo::PROTOCOL_1_26_44){
-						$entry->objectiveName = CommonTypes::readOptional($in, CommonTypes::getString(...));
+					if($protocolId >= ProtocolInfo::PROTOCOL_1_26_44 && $protocolId < ProtocolInfo::PROTOCOL_1_26_45){
+						$entry->objectiveName = CommonTypes::readDoubleOptional($in, CommonTypes::getString(...));
 					}else{
 						$entry->objectiveName = CommonTypes::readOptional($in, CommonTypes::getString(...));
 					}
@@ -128,8 +128,8 @@ class SetScorePacket extends DataPacket implements ClientboundPacket{
 				VarInt::writeSignedLong($out, $entry->scoreboardId);
 
 				if($entry->action === ScorePacketEntryAction::REMOVE){
-					if($protocolId >= ProtocolInfo::PROTOCOL_1_26_44){
-						CommonTypes::writeOptional($out, $entry->objectiveName, CommonTypes::putString(...));
+					if($protocolId >= ProtocolInfo::PROTOCOL_1_26_44 && $protocolId < ProtocolInfo::PROTOCOL_1_26_45){
+						CommonTypes::writeDoubleOptional($out, $entry->objectiveName, CommonTypes::putString(...));
 					}else{
 						CommonTypes::writeOptional($out, $entry->objectiveName, CommonTypes::putString(...));
 					}
