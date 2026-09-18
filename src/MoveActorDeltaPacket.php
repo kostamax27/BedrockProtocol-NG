@@ -45,7 +45,7 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 	public bool $forceMoveLocalEntity = false; //force move local entity in the docs
 	public bool $forceCompletion = false;
 	/** Expected number of ticks before the next movement update, used for position interpolation duration on the client. */
-	public int $ticks;
+	public int $ticks = 0;
 
 	/**
 	 * @generate-create-func
@@ -93,7 +93,9 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 			$this->teleport = CommonTypes::getBool($in);
 			$this->forceMoveLocalEntity = CommonTypes::getBool($in);
 			$this->forceCompletion = CommonTypes::getBool($in);
-			$this->ticks = $protocolId >= ProtocolInfo::PROTOCOL_1_26_50 ? VarInt::readUnsignedLong($in) : 0;
+			if($protocolId >= ProtocolInfo::PROTOCOL_1_26_50){
+				$this->ticks = VarInt::readUnsignedLong($in);
+			}
 		}else{
 			$flags = LE::readUnsignedShort($in);
 			$this->xPos = ($flags & self::FLAG_HAS_X) !== 0 ? LE::readFloat($in) : null;
@@ -106,7 +108,6 @@ class MoveActorDeltaPacket extends DataPacket implements ClientboundPacket{
 			$this->teleport = ($flags & self::FLAG_TELEPORT) !== 0;
 			$this->forceMoveLocalEntity = ($flags & self::FLAG_FORCE_MOVE_LOCAL_ENTITY) !== 0;
 			$this->forceCompletion = false;
-			$this->ticks = 0;
 		}
 	}
 
